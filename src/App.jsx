@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Clock, Zap, Target, Plus, X, MessageCircle, Send, Play, Pause, Check, Archive, AlertCircle, ChevronRight } from 'lucide-react';
+import { Sparkles, Clock, Zap, Target, Plus, X, MessageCircle, Send, Play, Pause, Check, Archive, AlertCircle, ChevronRight, Settings, Loader } from 'lucide-react';
+import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse } from './utils/geminiAPI';
 
 export default function AlchemistCompass() {
   const [activeTab, setActiveTab] = useState('want');
@@ -15,11 +16,24 @@ export default function AlchemistCompass() {
   const [chatInput, setChatInput] = useState('');
   const timerRef = useRef(null);
 
-  // Load tasks from localStorage
+  // AI Integration
+  const [apiKey, setApiKey] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [guide, setGuide] = useState(null);
+  const [isLoadingGuide, setIsLoadingGuide] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  // Load from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('alchemist-tasks');
-    if (saved) {
-      setTasks(JSON.parse(saved));
+    const savedTasks = localStorage.getItem('alchemist-tasks');
+    const savedApiKey = localStorage.getItem('alchemist-api-key');
+    
+    if (savedTasks) {
+      setTasks(JSON.parse(savedTasks));
+    }
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
     }
   }, []);
 
@@ -27,6 +41,13 @@ export default function AlchemistCompass() {
   useEffect(() => {
     localStorage.setItem('alchemist-tasks', JSON.stringify(tasks));
   }, [tasks]);
+
+  // Save API key
+  useEffect(() => {
+    if (apiKey) {
+      localStorage.setItem('alchemist-api-key', apiKey);
+    }
+  }, [apiKey]);
 
   // Timer logic
   useEffect(() => {
@@ -50,46 +71,90 @@ export default function AlchemistCompass() {
     }
   }, [timeLeft, isRunning]);
 
-  // Mock AI evaluation
-  const evaluateTask = (title) => {
-    const impact = Math.floor(Math.random() * 4) + 7;
-    const ease = Math.floor(Math.random() * 5) + 6;
-    const estimatedMinutes = [15, 30, 45, 60][Math.floor(Math.random() * 4)];
-    const reasons = [
-      'あなたの価値観と一致します',
-      'すぐに始められます',
-      '長期的な成長に繋がります',
-      'システム構築のスキルを活かせます',
-      '短時間で成果が得られます'
-    ];
-    
-    return {
-      id: Date.now(),
-      title,
-      impact,
-      ease,
-      estimatedMinutes,
-      reason: reasons[Math.floor(Math.random() * reasons.length)],
-      score: impact * ease,
-      createdAt: new Date().toISOString()
-    };
-  };
-
-  const addTask = () => {
+  // Add task with AI evaluation
+  const addTask = async () => {
     if (!newTaskTitle.trim()) return;
-    const task = evaluateTask(newTaskTitle);
-    setTasks(prev => ({
-      ...prev,
-      [activeTab]: [...prev[activeTab], task].sort((a, b) => b.score - a.score)
-    }));
-    setNewTaskTitle('');
-    setShowAddTask(false);
+    
+    setIsEvaluating(true);
+    
+    try {
+      let evaluation;
+      if (apiKey) {
+        // Use real AI evaluation
+        evaluation = await evaluateTaskAPI(newTaskTitle, activeTab, {}, apiKey);
+      } else {
+        // Fallback to mock evaluation
+        const impact = Math.floor(Math.random() * 4) + 7;
+        const ease = Math.floor(Math.random() * 5) + 6;
+        evaluation = {
+          impact,
+          ease,
+          estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
+          reason: 'AI設定後により精度の高い評価が可能になります',
+          score: impact * ease
+        };
+      }
+
+      const task = {
+        id: Date.now(),
+        title: newTaskTitle,
+        category: activeTab,
+        ...evaluation,
+        createdAt: new Date().toISOString()
+      };
+
+      setTasks(prev => ({
+        ...prev,
+        [activeTab]: [...prev[activeTab], task].sort((a, b) => b.score - a.score)
+      }));
+      
+      setNewTaskTitle('');
+      setShowAddTask(false);
+    } catch (error) {
+      console.error('Task evaluation failed:', error);
+      alert('タスク評価に失敗しました');
+    } finally {
+      setIsEvaluating(false);
+    }
   };
 
-  const selectTask = (task) => {
+  const selectTask = async (task) => {
     setSelectedTask(task);
     setMode('guide');
     setChatMessages([]);
+    setGuide(null);
+    
+    // Generate guide
+    if (apiKey) {
+      setIsLoadingGuide(true);
+      try {
+        const generatedGuide = await generateGuideAPI(task, {}, apiKey);
+        setGuide(generatedGuide);
+      } catch (error) {
+        console.error('Guide generation failed:', error);
+        setGuide({
+          approach: 'MVP思考で素早く形にすることを重視',
+          steps: [
+            '最小限の機能を定義する',
+            '2時間で動くプロトタイプを作る',
+            'フィードバックを得て改善する'
+          ],
+          completion: '動作するバージョンを完成させる'
+        });
+      } finally {
+        setIsLoadingGuide(false);
+      }
+    } else {
+      setGuide({
+        approach: 'MVP思考で素早く形にすることを重視',
+        steps: [
+          '最小限の機能を定義する',
+          '2時間で動くプロトタイプを作る',
+          'フィードバックを得て改善する'
+        ],
+        completion: '動作するバージョンを完成させる'
+      });
+    }
   };
 
   const startTimer = () => {
@@ -116,14 +181,41 @@ export default function AlchemistCompass() {
     setTimeLeft(5 * 60);
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!chatInput.trim()) return;
     
-    setChatMessages(prev => [...prev, 
-      { role: 'user', content: chatInput },
-      { role: 'assistant', content: '考えすぎず、まず手を動かしましょう。小さな一歩から始めてください。' }
-    ]);
+    const userMessage = chatInput;
     setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    
+    if (apiKey) {
+      setIsSendingMessage(true);
+      try {
+        const response = await getChatResponse(
+          userMessage,
+          {
+            title: selectedTask.title,
+            timeLeft
+          },
+          chatMessages,
+          apiKey
+        );
+        setChatMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      } catch (error) {
+        console.error('Chat response failed:', error);
+        setChatMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: '考えすぎず、まず手を動かしましょう。小さな一歩から始めてください。' 
+        }]);
+      } finally {
+        setIsSendingMessage(false);
+      }
+    } else {
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: '考えすぎず、まず手を動かしましょう。小さな一歩から始めてください。' 
+      }]);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -148,10 +240,48 @@ export default function AlchemistCompass() {
               Alchemist's Compass
             </h1>
           </div>
-          <div className="text-xs text-slate-500">
-            Phase 1 MVP
+          <div className="flex items-center gap-3">
+            {apiKey ? (
+              <div className="text-xs text-emerald-400 flex items-center gap-1">
+                ✓ AI有効
+              </div>
+            ) : (
+              <div className="text-xs text-amber-400 flex items-center gap-1">
+                ⚠ AI未設定
+              </div>
+            )}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-cyan-500/30 text-slate-400"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
         </div>
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="mb-6 p-4 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800">
+            <h3 className="text-sm font-semibold mb-3">設定</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Gemini API Key</label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="AIxxxxx..."
+                  className="w-full py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+                    API Keyを取得
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {mode === 'list' && (
           <>
@@ -200,24 +330,34 @@ export default function AlchemistCompass() {
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTask()}
+                  onKeyPress={(e) => e.key === 'Enter' && !isEvaluating && addTask()}
                   placeholder="何をしますか？"
                   className="w-full bg-transparent border-none outline-none text-slate-100 mb-3"
                   autoFocus
+                  disabled={isEvaluating}
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={addTask}
-                    className="flex-1 py-2 px-4 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 text-sm"
+                    disabled={isEvaluating}
+                    className="flex-1 py-2 px-4 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    追加
+                    {isEvaluating ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        評価中...
+                      </>
+                    ) : (
+                      '追加'
+                    )}
                   </button>
                   <button
                     onClick={() => {
                       setShowAddTask(false);
                       setNewTaskTitle('');
                     }}
-                    className="py-2 px-4 rounded bg-slate-800/50 border border-slate-700 text-slate-400 hover:border-slate-600 text-sm"
+                    disabled={isEvaluating}
+                    className="py-2 px-4 rounded bg-slate-800/50 border border-slate-700 text-slate-400 hover:border-slate-600 text-sm disabled:opacity-50"
                   >
                     キャンセル
                   </button>
@@ -287,34 +427,38 @@ export default function AlchemistCompass() {
             <div className="p-6 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800">
               <h2 className="text-xl font-bold mb-4">{selectedTask.title}</h2>
               
-              <div className="mb-6 p-4 rounded bg-cyan-500/5 border border-cyan-500/20">
-                <div className="text-sm font-semibold text-cyan-400 mb-2">なぜこのアプローチが合うか</div>
-                <p className="text-sm text-slate-300">
-                  MVP思考で素早く形にすることを重視。Decision Flowの成功パターン（2時間完成）を参考に、完璧を求めず動くものを作りましょう。
-                </p>
-              </div>
-
-              <div className="mb-6">
-                <div className="text-sm font-semibold text-slate-300 mb-3">推奨ステップ</div>
-                <div className="space-y-2">
-                  <div className="p-3 rounded bg-slate-800/50 border border-slate-700 text-sm">
-                    1. 最小限の機能を定義する
-                  </div>
-                  <div className="p-3 rounded bg-slate-800/50 border border-slate-700 text-sm">
-                    2. 2時間で動くプロトタイプを作る
-                  </div>
-                  <div className="p-3 rounded bg-slate-800/50 border border-slate-700 text-sm">
-                    3. フィードバックを得て改善する
-                  </div>
+              {isLoadingGuide ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="w-8 h-8 animate-spin text-cyan-400" />
                 </div>
-              </div>
+              ) : guide && (
+                <>
+                  <div className="mb-6 p-4 rounded bg-cyan-500/5 border border-cyan-500/20">
+                    <div className="text-sm font-semibold text-cyan-400 mb-2">なぜこのアプローチが合うか</div>
+                    <p className="text-sm text-slate-300">
+                      {guide.approach}
+                    </p>
+                  </div>
 
-              <div className="mb-6 p-4 rounded bg-emerald-500/5 border border-emerald-500/20">
-                <div className="text-sm font-semibold text-emerald-400 mb-2">完了基準</div>
-                <p className="text-sm text-slate-300">
-                  動作するバージョンを完成させる
-                </p>
-              </div>
+                  <div className="mb-6">
+                    <div className="text-sm font-semibold text-slate-300 mb-3">推奨ステップ</div>
+                    <div className="space-y-2">
+                      {guide.steps.map((step, i) => (
+                        <div key={i} className="p-3 rounded bg-slate-800/50 border border-slate-700 text-sm">
+                          {i + 1}. {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-6 p-4 rounded bg-emerald-500/5 border border-emerald-500/20">
+                    <div className="text-sm font-semibold text-emerald-400 mb-2">完了基準</div>
+                    <p className="text-sm text-slate-300">
+                      {guide.completion}
+                    </p>
+                  </div>
+                </>
+              )}
 
               <button
                 onClick={startTimer}
@@ -378,6 +522,12 @@ export default function AlchemistCompass() {
                     {msg.content}
                   </div>
                 ))}
+                {isSendingMessage && (
+                  <div className="p-2 rounded text-sm bg-slate-800/50 text-slate-300 mr-8 flex items-center gap-2">
+                    <Loader className="w-3 h-3 animate-spin" />
+                    考え中...
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2">
@@ -385,15 +535,21 @@ export default function AlchemistCompass() {
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && sendMessage()}
                   placeholder="質問を入力..."
                   className="flex-1 py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                  disabled={isSendingMessage}
                 />
                 <button
                   onClick={sendMessage}
-                  className="py-2 px-4 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20"
+                  disabled={isSendingMessage}
+                  className="py-2 px-4 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 disabled:opacity-50"
                 >
-                  <Send className="w-4 h-4" />
+                  {isSendingMessage ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
