@@ -1,90 +1,76 @@
 # Alchemist's Compass
 
-**AI-Powered Action Recommendation System**
+**AI-Powered Task Management System**
 
-完璧主義と分析麻痺を打ち破る、パーソナライズされた行動支援システム。
+スマートなタスク管理とAIコーチングで、行動を加速させるダッシュボードアプリケーション。
 
-## ✨ Features
+[![Deploy](https://img.shields.io/badge/deploy-vercel-black)](https://alchemist-compass.vercel.app)
+[![Status](https://img.shields.io/badge/status-active-success)]()
+[![License](https://img.shields.io/badge/license-MIT-blue)]()
 
-- **デュアルタブシステム**: Want（やりたいこと）/ Should（やるべきこと）を分離
-- **AI評価**: Gemini APIでタスクをImpact × Easeで自動スコアリング
-- **AIモデル選択**: 4つのGeminiモデルから選択可能
-- **UIテーマ切替**: 3つのデザインパターン（Linear/Systematic/Minimal）
-- **AIガイド生成**: あなた専用の実行ガイドを自動生成
-- **5分タイマー**: 考えすぎを防ぐ時間制限付き実行モード
-- **AIコーチング**: 実行中のリアルタイムQ&Aサポート
-- **タスク管理**: リストから直接削除可能
+## 🎯 Features
 
-## 🚀 Quick Start
+### Core Features
+- **AI評価**: Gemini APIによる自動タスク評価（Impact × Ease）
+- **パーソナライズ**: ユーザーの価値観と行動パターンに基づく推奨
+- **実行ガイド**: AIが生成するカスタム実行戦略
+- **5分タイマー**: 集中して取り組むための時間管理
+- **AIコーチ**: リアルタイムでの質問対応
 
-### 1. インストール
+### Dashboard Features
+- **📊 Analytics Dashboard**: タスクの統計情報とグラフ表示
+- **📱 Bottom Navigation**: モバイルフレンドリーなナビゲーション
+- **⚙️ Settings Panel**: API Key管理、モデル選択、通知設定
+- **🎨 Modern UI**: ダッシュボードスタイルのデザインシステム
 
-```bash
-npm install
-npm run dev
+## 🚀 Demo
+
+**Live Demo**: [https://alchemist-compass.vercel.app](https://alchemist-compass.vercel.app)
+
+## 🎨 Design System
+
+### Visual Language
+- **Color Scheme**: Pure Black (#000000) + Blue/Cyan Gradients
+- **Typography**: Monospace (Cascadia Code, Courier New)
+- **Components**: Rounded cards with box shadows
+- **Labels**: Uppercase for system feel
+- **Layout**: Dashboard-style with bottom navigation
+
+### UI Components
+```
+📱 Bottom Navigation
+  ├─ HOME: Task management
+  ├─ ANALYTICS: Statistics & charts
+  └─ SETTINGS: Configuration
+
+🎴 Task Cards
+  ├─ Gradient score badge
+  ├─ Impact/Ease progress bars
+  ├─ Time estimate
+  └─ Action buttons
+
+📊 Analytics
+  ├─ Stats grid (4 metrics)
+  ├─ Distribution chart
+  └─ Recent activity feed
 ```
 
-Visit: http://localhost:3000
+## 📦 Setup
 
-### 2. 設定（右上⚙️アイコンから）
+### Required
 
-**Gemini API設定**
-1. [Google AI Studio](https://aistudio.google.com/apikey) でAPI Keyを取得
-2. API Keyを入力して保存
+1. **Gemini API Key**
+   - Get from: https://aistudio.google.com/apikey
+   - Enter in Settings panel
+   - Free tier available
 
-**AIモデル選択**
-- `Gemini 2.0 Flash Exp`: 最速・低コスト（デフォルト）
-- `Gemini 2.0 Flash Thinking`: 思考プロセス付き・高精度
-- `Gemini 1.5 Flash`: バランス型・安定版
-- `Gemini 1.5 Pro`: 最高品質・複雑なタスク向け
-
-**UIテーマ選択**
-- `Linear`: モダン・洗練系（現在のデフォルト）
-- `Systematic`: システマティック・開発ツール系
-- `Minimal`: ミニマル・機能重視
-
-## 📦 Tech Stack
-
-- **Frontend**: React 18 + Vite
-- **Styling**: Tailwind CSS + CSS Variables
-- **Icons**: Lucide React
-- **AI**: Gemini API (Multiple Models)
-- **Storage**: localStorage
-
-## 🎯 Development Status
-
-### Phase 1: MVP ✅
-- 基本UI実装
-- タスク管理（CRUD）
-- デュアルタブシステム
-- 5分アクションタイマー
-- チャットインターフェース
-
-### Phase 2: AI Integration ✅
-- Gemini API統合
-- リアルタイムタスク評価
-- カスタムガイド生成
-- AIチャット応答
-- フォールバック機能
-
-### Phase 2.5: Customization ✅ (New!)
-- **UIテーマシステム**: 3つのデザインパターン
-- **AIモデル選択**: 4つのGeminiモデル対応
-- **タスク削除機能**: 完了前でも削除可能
-
-### Phase 3: Advanced Features (Planned)
-- 統計・振り返り機能
-- 通知システム
-- Notion MCP連携
-- データエクスポート
-
-## 📱 PWA Support
-
-このアプリはPWAとして動作し、ホーム画面に追加できます。
-
-## 🛠️ Development
+### Installation
 
 ```bash
+# Clone repository
+git clone https://github.com/I1031-h/alchemist-compass.git
+cd alchemist-compass
+
 # Install dependencies
 npm install
 
@@ -93,108 +79,159 @@ npm run dev
 
 # Build for production
 npm run build
-
-# Preview production build
-npm run preview
 ```
 
-## 🔐 Environment Variables
+## 🎮 Usage
 
-`.env.example`をコピーして`.env.local`を作成：
+### Task Management
+1. Select **WANT** or **SHOULD** tab
+2. Click **ADD NEW TASK**
+3. Enter task title
+4. AI evaluates automatically
+5. Tasks sorted by score
 
-```bash
-cp .env.example .env.local
-```
+### Starting a Task
+1. Click **START** on any task
+2. View AI-generated guide
+3. Start 5-minute timer
+4. Ask AI coach during execution
+5. Mark as complete/defer/drop
 
-必要な変数：
-```env
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
-```
+### Analytics
+- View total tasks count
+- Check want/should balance
+- See average score
+- Review recent activity
+
+### Settings
+- Configure Gemini API Key
+- Select AI model (4 options)
+- Toggle notifications
+- Toggle auto-evaluate
+
+## 🛠 Tech Stack
+
+- **Frontend**: React 18 + Vite
+- **Styling**: Tailwind CSS (utility-first)
+- **Icons**: Lucide React
+- **AI**: Gemini API (Multiple Models)
+- **Storage**: localStorage
+- **Deployment**: Vercel
 
 ## 💰 API Cost Estimation
 
-### Gemini 2.0 Flash Exp（デフォルト）
+### Gemini 2.0 Flash Exp (Default)
 
 ```
-1日の使用例:
-- タスク評価: 10回 × 500 tokens = 5,000 tokens
-- ガイド生成: 3回 × 1,000 tokens = 3,000 tokens
-- チャット: 20回 × 300 tokens = 6,000 tokens
-合計: 約14,000 tokens/日 = 420,000 tokens/月
+Daily usage:
+- Task evaluation: 10 × 500 tokens = 5,000 tokens
+- Guide generation: 3 × 1,000 tokens = 3,000 tokens
+- Chat: 20 × 300 tokens = 6,000 tokens
+Total: ~14,000 tokens/day = 420,000 tokens/month
 
-料金: $3.50 per 1M tokens
-月額コスト: 約$1.50
+Pricing: $3.50 per 1M tokens
+Monthly cost: ~$1.50
 ```
 
-### モデル比較
+### Model Comparison
 
-| モデル | 速度 | 品質 | コスト | 推奨用途 |
-|--------|------|------|--------|----------|
-| 2.0 Flash Exp | 最速 | 良い | 最安 | 日常使用 |
-| 2.0 Flash Thinking | 中速 | 最高 | 中 | 重要タスク |
-| 1.5 Flash | 速い | 良い | 安 | 安定重視 |
-| 1.5 Pro | 遅い | 最高 | 高 | 複雑な分析 |
+| Model | Speed | Quality | Cost | Use Case |
+|-------|-------|---------|------|----------|
+| 2.0 Flash Exp | Fastest | Good | Cheapest | Daily use |
+| 2.0 Flash Thinking | Medium | Best | Medium | Important tasks |
+| 1.5 Flash | Fast | Good | Low | Stable |
+| 1.5 Pro | Slow | Best | High | Complex analysis |
 
-## 🎨 Design Philosophy
+## 📱 PWA Support
 
-### テーマシステム
+This app works as a Progressive Web App (PWA):
+- Add to home screen
+- Offline capability (coming soon)
+- Native app experience
 
-**Linear（デフォルト）**
-- モダン・洗練系
-- シアン→バイオレットグラデーション
-- Vercel/Linear風
+## 🎯 Development Status
 
-**Systematic**
-- プロフェッショナル・開発ツール系
-- ダークブルー + コーラル
-- 情報密度高
+### Phase 1: MVP ✅
+- Basic UI implementation
+- Task CRUD operations
+- Dual-tab system (Want/Should)
+- 5-minute action timer
+- Chat interface
 
-**Minimal**
-- ミニマル・機能重視
-- シアン + ホワイト
-- 余白多め
+### Phase 2: AI Integration ✅
+- Gemini API integration
+- Real-time task evaluation
+- Custom guide generation
+- AI chat responses
+- Fallback functionality
 
-## 🎯 使い方のコツ
+### Phase 3: Dashboard UI ✅ (Current)
+- Bottom navigation
+- Analytics dashboard
+- Settings panel
+- Modern card design
+- Responsive layout
 
-### タスク追加
+### Phase 4: Advanced Features (Planned)
+- Statistics & reflection
+- Notification system
+- Notion MCP integration
+- Data export/import
+
+## 🔐 Environment Variables
+
+Create `.env.local`:
+
+```env
+VITE_GEMINI_API_KEY=your_api_key_here
 ```
-1. 「やりたいこと」または「やるべきこと」タブを選択
-2. タスクを入力
-3. AI評価を待つ（2-3秒）
-4. 自動的にスコア順にソート
+
+## 📖 Tips & Best Practices
+
+### Task Management
+```
+✓ Keep task titles concise
+✓ Use WANT for intrinsic motivation
+✓ Use SHOULD for obligations
+✓ Review analytics weekly
 ```
 
-### タスク削除
+### Model Selection
 ```
-- リスト上でタスクにホバー
-- ゴミ箱アイコンが表示
-- クリックで削除確認
-```
-
-### モデル変更
-```
-設定 → AIモデル → 選択
-- タイマー時のチャット品質を高めたい → 2.0 Flash Thinking
-- コストを抑えたい → 2.0 Flash Exp（デフォルト）
+Daily tasks → 2.0 Flash Exp (fast, cheap)
+Important decisions → 2.0 Flash Thinking (best quality)
+Cost-sensitive → 1.5 Flash (balanced)
+Complex analysis → 1.5 Pro (highest quality)
 ```
 
-### テーマ変更
+### Timer Usage
 ```
-設定 → UIテーマ → 選択
-- リアルタイムで反映
-- 選択内容は自動保存
+✓ Use chat for quick questions
+✓ Pause if you need a break
+✓ Complete early if finished
+✓ Defer if task needs rethinking
 ```
 
 ## 🤝 Related Projects
 
-- [Decision Flow](https://github.com/I1031-h/decision-flow) - 2時間で作ったMVP（成功パターン）
+- [Decision Flow](https://github.com/I1031-h/decision-flow) - 2-hour MVP success pattern
+- [Notion MCP](https://github.com/anthropics/anthropic-quickstarts) - Context integration (planned)
 
 ## 📄 License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details
+
+## 👤 Author
+
+**[@I1031-h](https://github.com/I1031-h)**
+
+Built with 🔥 using:
+- Claude Sonnet 4.5
+- MCP (Model Context Protocol)
+- Gemini 2.0 Flash
 
 ---
 
-**Built with 🔥 by [I1031-h](https://github.com/I1031-h)**
+**Deployed on Vercel** • [alchemist-compass.vercel.app](https://alchemist-compass.vercel.app)
 
-**Deployed:** [alchemist-compass.vercel.app](https://alchemist-compass.vercel.app)
+*"時間とエネルギーを「行動」に直結させる"*
