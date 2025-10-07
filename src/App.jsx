@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Clock, Zap, Target, Plus, X, MessageCircle, Send, Play, Pause, Check, Archive, AlertCircle, ChevronRight, Settings, Loader, Trash2, Palette } from 'lucide-react';
+import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette } from 'lucide-react';
 import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions } from './utils/geminiAPI';
-import { getThemeOptions, applyTheme } from './utils/themes';
 
 export default function AlchemistCompass() {
+  const [currentPage, setCurrentPage] = useState('home');
   const [activeTab, setActiveTab] = useState('want');
   const [tasks, setTasks] = useState({ want: [], should: [] });
   const [showAddTask, setShowAddTask] = useState(false);
@@ -19,9 +19,9 @@ export default function AlchemistCompass() {
 
   // Settings
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
-  const [selectedTheme, setSelectedTheme] = useState('v0');
-  const [showSettings, setShowSettings] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash-exp');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [autoEvaluate, setAutoEvaluate] = useState(false);
   
   // Loading states
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -32,7 +32,6 @@ export default function AlchemistCompass() {
   // Error state
   const [errorMessage, setErrorMessage] = useState('');
 
-  const themeOptions = getThemeOptions();
   const modelOptions = getModelOptions();
 
   // Load from localStorage
@@ -40,7 +39,8 @@ export default function AlchemistCompass() {
     const savedTasks = localStorage.getItem('alchemist-tasks');
     const savedApiKey = localStorage.getItem('alchemist-api-key');
     const savedModel = localStorage.getItem('alchemist-model');
-    const savedTheme = localStorage.getItem('alchemist-theme');
+    const savedNotifications = localStorage.getItem('alchemist-notifications');
+    const savedAutoEval = localStorage.getItem('alchemist-auto-eval');
     
     if (savedTasks) {
       setTasks(JSON.parse(savedTasks));
@@ -51,11 +51,11 @@ export default function AlchemistCompass() {
     if (savedModel) {
       setSelectedModel(savedModel);
     }
-    if (savedTheme) {
-      setSelectedTheme(savedTheme);
-      applyTheme(savedTheme);
-    } else {
-      applyTheme('v0');
+    if (savedNotifications !== null) {
+      setNotificationsEnabled(savedNotifications === 'true');
+    }
+    if (savedAutoEval !== null) {
+      setAutoEvaluate(savedAutoEval === 'true');
     }
   }, []);
 
@@ -76,9 +76,12 @@ export default function AlchemistCompass() {
   }, [selectedModel]);
 
   useEffect(() => {
-    localStorage.setItem('alchemist-theme', selectedTheme);
-    applyTheme(selectedTheme);
-  }, [selectedTheme]);
+    localStorage.setItem('alchemist-notifications', notificationsEnabled.toString());
+  }, [notificationsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('alchemist-auto-eval', autoEvaluate.toString());
+  }, [autoEvaluate]);
 
   // Timer logic
   useEffect(() => {
@@ -222,6 +225,7 @@ export default function AlchemistCompass() {
     setSelectedTask(null);
     setIsRunning(false);
     setTimeLeft(5 * 60);
+    setCurrentPage('home');
   };
 
   const sendMessage = async () => {
@@ -268,142 +272,78 @@ export default function AlchemistCompass() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const allTasks = [...tasks.want, ...tasks.should];
   const currentTasks = tasks[activeTab] || [];
+  const avgScore = allTasks.length > 0 ? Math.round(allTasks.reduce((acc, t) => acc + t.score, 0) / allTasks.length) : 0;
 
   return (
-    <div className=\"min-h-screen bg-theme-primary text-theme-primary font-mono\">
-      {/* Grid Background */}
-      <div className=\"fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]\" />
-      
-      <div className=\"relative max-w-5xl mx-auto p-6\">
-        {/* Header */}
-        <div className=\"flex items-center justify-between mb-8\">
-          <div className=\"flex items-center gap-3\">
-            <Sparkles className=\"w-8 h-8 text-theme-accent-cyan\" />
-            <h1 className=\"text-2xl font-bold gradient-text\">
-              Alchemist's Compass
-            </h1>
-          </div>
-          <div className=\"flex items-center gap-3\">
-            {apiKey ? (
-              <div className=\"text-xs text-theme-accent-emerald flex items-center gap-1\">
-                ✓ AI有効
-              </div>
-            ) : (
-              <div className=\"text-xs text-amber-400 flex items-center gap-1\">
-                ⚠ API Key未設定
-              </div>
-            )}
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className=\"p-2 rounded bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors\"
-            >
-              <Settings className=\"w-4 h-4\" />
-            </button>
-          </div>
-        </div>
-
-        {/* Error Message */}
-        {errorMessage && (
-          <div className=\"mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm\">
-            {errorMessage}
-          </div>
-        )}
-
-        {/* Settings Panel */}
-        {showSettings && (
-          <div className=\"mb-6 p-4 rounded-lg glass-card border border-theme-default\">
-            <h3 className=\"text-sm font-semibold mb-4 flex items-center gap-2 text-theme-primary\">
-              <Settings className=\"w-4 h-4\" />
-              設定
-            </h3>
-            <div className=\"space-y-4\">
-              <div>
-                <label className=\"text-xs text-theme-secondary block mb-1\">Gemini API Key</label>
-                <input
-                  type=\"password\"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder=\"AIxxxxx...\"
-                  className=\"w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
-                />
-                <p className=\"text-xs text-theme-tertiary mt-1\">
-                  <a href=\"https://aistudio.google.com/apikey\" target=\"_blank\" rel=\"noopener noreferrer\" className=\"text-theme-accent-cyan hover:underline\">
-                    API Keyを取得
-                  </a>
-                  　|　利用料は無料枠内で十分使えます
-                </p>
-              </div>
-
-              <div>
-                <label className=\"text-xs text-theme-secondary block mb-1\">AIモデル（推奨: Gemini 2.5 Flash）</label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className=\"w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
-                >
-                  {modelOptions.map(model => (
-                    <option key={model.id} value={model.id}>
-                      {model.name} - {model.description}
-                    </option>
-                  ))}
-                </select>
-                <div className=\"mt-1 flex gap-3 text-xs text-theme-tertiary\">
-                  <span>速度: {modelOptions.find(m => m.id === selectedModel)?.speed}</span>
-                  <span>品質: {modelOptions.find(m => m.id === selectedModel)?.quality}</span>
-                  <span>コスト: {modelOptions.find(m => m.id === selectedModel)?.cost}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className=\"text-xs text-theme-secondary block mb-1 flex items-center gap-1\">
-                  <Palette className=\"w-3 h-3\" />
-                  UIテーマ
-                </label>
-                <select
-                  value={selectedTheme}
-                  onChange={(e) => setSelectedTheme(e.target.value)}
-                  className=\"w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
-                >
-                  {themeOptions.map(theme => (
-                    <option key={theme.value} value={theme.value}>
-                      {theme.label} - {theme.description}
-                    </option>
-                  ))}
-                </select>
-              </div>
+    <div className="min-h-screen bg-black text-white font-mono flex flex-col">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center" style={{ boxShadow: '0 4px 12px rgba(59,130,246,0.5)' }}>
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">ALCHEMIST'S COMPASS</h1>
+              <p className="text-xs text-gray-500">AI-Powered Task Management</p>
             </div>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            {apiKey ? (
+              <div className="px-3 py-1 rounded bg-green-500/20 border border-green-500/50 text-green-400 text-xs" style={{ boxShadow: '0 2px 8px rgba(34,197,94,0.3)' }}>
+                ● ONLINE
+              </div>
+            ) : (
+              <div className="px-3 py-1 rounded bg-amber-500/20 border border-amber-500/50 text-amber-400 text-xs" style={{ boxShadow: '0 2px 8px rgba(251,191,36,0.3)' }}>
+                ⚠ OFFLINE
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-        {mode === 'list' && (
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="mx-6 mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto p-6">
+        {/* HOME PAGE */}
+        {currentPage === 'home' && mode === 'list' && (
           <>
             {/* Tab Navigation */}
-            <div className=\"flex gap-2 mb-6\">
+            <div className="flex gap-2 mb-6">
               <button
                 onClick={() => setActiveTab('want')}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
                   activeTab === 'want'
-                    ? 'glass-card border border-theme-active text-theme-accent-cyan'
-                    : 'glass-card border border-theme-default text-theme-secondary hover:border-theme-hover'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-900 text-gray-400 border border-gray-800'
                 }`}
+                style={activeTab === 'want' ? { boxShadow: '0 4px 12px rgba(59,130,246,0.5)' } : { boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
               >
-                <div className=\"flex items-center justify-center gap-2\">
-                  <Target className=\"w-4 h-4\" />
-                  やりたいこと ({currentTasks.length})
+                <div className="flex items-center justify-center gap-2">
+                  <Target className="w-4 h-4" />
+                  WANT ({currentTasks.length})
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab('should')}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
                   activeTab === 'should'
-                    ? 'glass-card border border-[rgba(167,139,250,0.4)] text-theme-accent-violet'
-                    : 'glass-card border border-theme-default text-theme-secondary hover:border-theme-hover'
+                    ? 'bg-cyan-500 text-white'
+                    : 'bg-gray-900 text-gray-400 border border-gray-800'
                 }`}
+                style={activeTab === 'should' ? { boxShadow: '0 4px 12px rgba(6,182,212,0.5)' } : { boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
               >
-                <div className=\"flex items-center justify-center gap-2\">
-                  <AlertCircle className=\"w-4 h-4\" />
-                  やるべきこと ({tasks.should?.length || 0})
+                <div className="flex items-center justify-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  SHOULD ({tasks.should?.length || 0})
                 </div>
               </button>
             </div>
@@ -412,36 +352,38 @@ export default function AlchemistCompass() {
             {!showAddTask ? (
               <button
                 onClick={() => setShowAddTask(true)}
-                className=\"w-full py-4 px-4 mb-6 rounded-lg glass-card border border-theme-default hover:border-theme-active text-theme-secondary hover:text-theme-accent-cyan transition-all flex items-center justify-center gap-2\"
+                className="w-full py-4 mb-6 rounded-xl bg-gray-900 border border-gray-800 hover:border-blue-500 text-gray-400 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
+                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
               >
-                <Plus className=\"w-5 h-5\" />
-                タスクを追加
+                <Plus className="w-5 h-5" />
+                ADD NEW TASK
               </button>
             ) : (
-              <div className=\"mb-6 p-4 rounded-lg glass-card border border-theme-active\">
+              <div className="mb-6 p-4 rounded-xl bg-gray-900 border border-blue-500" style={{ boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}>
                 <input
-                  type=\"text\"
+                  type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isEvaluating && addTask()}
-                  placeholder=\"何をしますか？\"
-                  className=\"w-full bg-transparent border-none outline-none text-theme-primary mb-3\"
+                  placeholder="Enter task title..."
+                  className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 mb-3 text-white outline-none focus:border-blue-500"
                   autoFocus
                   disabled={isEvaluating}
                 />
-                <div className=\"flex gap-2\">
+                <div className="flex gap-2">
                   <button
                     onClick={addTask}
                     disabled={isEvaluating}
-                    className=\"flex-1 py-2 px-4 rounded glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] text-sm disabled:opacity-50 flex items-center justify-center gap-2\"
+                    className="flex-1 py-2 px-4 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ boxShadow: '0 2px 8px rgba(59,130,246,0.4)' }}
                   >
                     {isEvaluating ? (
                       <>
-                        <Loader className=\"w-4 h-4 animate-spin\" />
-                        AI評価中...
+                        <Loader className="w-4 h-4 animate-spin" />
+                        EVALUATING...
                       </>
                     ) : (
-                      '追加'
+                      'ADD'
                     )}
                   </button>
                   <button
@@ -451,141 +393,164 @@ export default function AlchemistCompass() {
                       setErrorMessage('');
                     }}
                     disabled={isEvaluating}
-                    className=\"py-2 px-4 rounded glass-card border border-theme-default text-theme-secondary hover:border-theme-hover text-sm disabled:opacity-50\"
+                    className="py-2 px-4 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 disabled:opacity-50"
+                    style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
                   >
-                    キャンセル
+                    CANCEL
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Task List - v0 Style */}
-            <div className=\"grid grid-cols-1 md:grid-cols-2 gap-4\">
+            {/* Task Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentTasks.map(task => (
                 <div
                   key={task.id}
-                  className=\"gradient-border rounded-lg p-6 glass-card scale-on-hover cursor-pointer relative group\"
+                  className="bg-gray-900 rounded-xl border border-gray-800 hover:border-blue-500 transition-all p-4 cursor-pointer"
+                  style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}
                   onClick={() => selectTask(task)}
                 >
-                  {/* Score Badge - v0 Style */}
-                  <div className=\"absolute -top-3 -right-3 w-16 h-16 rounded-full score-badge flex items-center justify-center z-10\">
-                    <span className=\"text-2xl font-bold font-mono text-white\">{task.score}</span>
+                  {/* Score Badge */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white mb-1">{task.title}</h3>
+                      <div className="text-xs text-gray-500">ID: #{task.id.toString().padStart(4, '0')}</div>
+                    </div>
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-col" style={{ boxShadow: '0 4px 12px rgba(59,130,246,0.6)' }}>
+                      <div className="text-2xl font-bold">{task.score}</div>
+                      <div className="text-[10px]">SCORE</div>
+                    </div>
                   </div>
 
-                  {/* Delete Button - Show on hover */}
-                  <button
-                    onClick={(e) => deleteTask(e, task.id)}
-                    className=\"absolute top-2 right-2 p-2 rounded hover:bg-red-500/10 text-theme-tertiary hover:text-red-400 transition-all opacity-0 group-hover:opacity-100\"
-                  >
-                    <Trash2 className=\"w-4 h-4\" />
-                  </button>
-
-                  {/* Task Title */}
-                  <h3 className=\"text-lg font-semibold mb-6 pr-12 text-theme-primary leading-relaxed\">
-                    {task.title}
-                  </h3>
-
-                  {/* Progress Bars - v0 Style */}
-                  <div className=\"space-y-3\">
-                    {/* Impact Bar */}
-                    <div className=\"flex items-center gap-3 text-sm\">
-                      <div className=\"flex items-center gap-2 text-theme-accent-coral min-w-[80px]\">
-                        <Zap className=\"w-4 h-4\" />
-                        <span className=\"font-mono\">Impact</span>
+                  {/* Metrics */}
+                  <div className="space-y-3 mb-4">
+                    {/* Impact */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <Zap className="w-3 h-3" />
+                          IMPACT
+                        </div>
+                        <span className="text-xs font-mono text-white">{task.impact}/10</span>
                       </div>
-                      <div className=\"flex-1 h-2 bg-theme-tertiary rounded-full overflow-hidden\">
+                      <div className="h-2 bg-black rounded-full overflow-hidden">
                         <div
-                          className=\"h-full bg-gradient-to-r from-[var(--accent-coral)] to-[var(--accent-orange)] progress-bar\"
+                          className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500"
                           style={{ width: `${(task.impact / 10) * 100}%` }}
                         />
                       </div>
-                      <span className=\"font-mono text-theme-secondary w-6 text-right\">{task.impact}</span>
                     </div>
 
-                    {/* Ease Bar */}
-                    <div className=\"flex items-center gap-3 text-sm\">
-                      <div className=\"flex items-center gap-2 text-theme-accent-orange min-w-[80px]\">
-                        <Target className=\"w-4 h-4\" />
-                        <span className=\"font-mono\">Ease</span>
+                    {/* Ease */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <Target className="w-3 h-3" />
+                          EASE
+                        </div>
+                        <span className="text-xs font-mono text-white">{task.ease}/10</span>
                       </div>
-                      <div className=\"flex-1 h-2 bg-theme-tertiary rounded-full overflow-hidden\">
+                      <div className="h-2 bg-black rounded-full overflow-hidden">
                         <div
-                          className=\"h-full bg-gradient-to-r from-[var(--accent-orange)] to-[var(--accent-cyan)] progress-bar\"
+                          className="h-full bg-gradient-to-r from-cyan-500 to-green-500 transition-all duration-500"
                           style={{ width: `${(task.ease / 10) * 100}%` }}
                         />
                       </div>
-                      <span className=\"font-mono text-theme-secondary w-6 text-right\">{task.ease}</span>
                     </div>
 
                     {/* Time */}
-                    <div className=\"flex items-center gap-3 text-sm pt-2\">
-                      <div className=\"flex items-center gap-2 text-theme-secondary min-w-[80px]\">
-                        <Clock className=\"w-4 h-4\" />
-                        <span className=\"font-mono\">Time</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-800">
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <Clock className="w-3 h-3" />
+                        TIME ESTIMATE
                       </div>
-                      <span className=\"font-mono text-theme-primary\">{task.estimatedMinutes}分</span>
+                      <span className="text-xs font-mono text-white">{task.estimatedMinutes} MIN</span>
                     </div>
                   </div>
 
                   {/* Reason */}
                   {task.reason && (
-                    <div className=\"mt-4 text-xs text-theme-accent-cyan opacity-80\">
+                    <div className="mb-3 text-xs text-cyan-400 opacity-80">
                       {task.reason}
                     </div>
                   )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectTask(task);
+                      }}
+                      className="flex-1 py-2 px-3 rounded-lg bg-blue-500/20 border border-blue-500/50 text-blue-400 hover:bg-blue-500/30 text-xs flex items-center justify-center gap-2" 
+                      style={{ boxShadow: '0 2px 6px rgba(59,130,246,0.3)' }}
+                    >
+                      <Play className="w-3 h-3" />
+                      START
+                    </button>
+                    <button
+                      onClick={(e) => deleteTask(e, task.id)}
+                      className="py-2 px-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500/30"
+                      style={{ boxShadow: '0 2px 6px rgba(239,68,68,0.3)' }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
 
             {currentTasks.length === 0 && (
-              <div className=\"text-center py-12 text-theme-tertiary\">
-                <Sparkles className=\"w-12 h-12 mx-auto mb-3 opacity-50\" />
-                <p>タスクがありません</p>
-                <p className=\"text-xs mt-1\">上のボタンから追加してください</p>
+              <div className="text-center py-12 text-gray-600">
+                <div className="text-4xl mb-2">○</div>
+                <p className="text-sm">NO TASKS FOUND</p>
+                <p className="text-xs mt-1 text-gray-700">Add a task to get started</p>
               </div>
             )}
           </>
         )}
 
-        {mode === 'guide' && selectedTask && (
-          <div className=\"space-y-6\">
+        {/* GUIDE PAGE */}
+        {currentPage === 'home' && mode === 'guide' && selectedTask && (
+          <div className="space-y-6">
             <button
               onClick={() => setMode('list')}
-              className=\"text-sm text-theme-secondary hover:text-theme-accent-cyan flex items-center gap-1 transition-colors\"
+              className="text-sm text-gray-400 hover:text-blue-400 flex items-center gap-1 transition-colors"
             >
-              ← 戻る
+              ← BACK TO LIST
             </button>
 
-            <div className=\"p-6 rounded-lg glass-card border border-theme-default\">
-              <h2 className=\"text-xl font-bold mb-4 text-theme-primary\">{selectedTask.title}</h2>
+            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <h2 className="text-xl font-bold mb-4 text-white">{selectedTask.title}</h2>
               
               {isLoadingGuide ? (
-                <div className=\"flex items-center justify-center py-8\">
-                  <Loader className=\"w-8 h-8 animate-spin text-theme-accent-cyan\" />
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
               ) : guide && (
                 <>
-                  <div className=\"mb-6 p-4 rounded bg-[rgba(34,211,238,0.05)] border border-[rgba(34,211,238,0.2)]\">
-                    <div className=\"text-sm font-semibold text-theme-accent-cyan mb-2\">なぜこのアプローチが合うか</div>
-                    <p className=\"text-sm text-theme-secondary leading-relaxed\">
+                  <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                    <div className="text-xs font-bold text-blue-400 mb-2">YOUR APPROACH</div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
                       {guide.approach}
                     </p>
                   </div>
 
-                  <div className=\"mb-6\">
-                    <div className=\"text-sm font-semibold text-theme-primary mb-3\">推奨ステップ</div>
-                    <div className=\"space-y-2\">
+                  <div className="mb-6">
+                    <div className="text-xs font-bold text-gray-400 mb-3">RECOMMENDED STEPS</div>
+                    <div className="space-y-2">
                       {guide.steps.map((step, i) => (
-                        <div key={i} className=\"p-3 rounded bg-theme-tertiary border border-theme-default text-sm text-theme-primary leading-relaxed\">
+                        <div key={i} className="p-3 rounded-lg bg-black border border-gray-800 text-sm text-gray-300 leading-relaxed">
                           {i + 1}. {step}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className=\"mb-6 p-4 rounded bg-[rgba(52,211,153,0.05)] border border-[rgba(52,211,153,0.2)]\">
-                    <div className=\"text-sm font-semibold text-theme-accent-emerald mb-2\">完了基準</div>
-                    <p className=\"text-sm text-theme-secondary leading-relaxed\">
+                  <div className="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                    <div className="text-xs font-bold text-green-400 mb-2">COMPLETION CRITERIA</div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
                       {guide.completion}
                     </p>
                   </div>
@@ -594,93 +559,98 @@ export default function AlchemistCompass() {
 
               <button
                 onClick={startTimer}
-                className=\"w-full py-4 px-4 rounded-lg glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] transition-all flex items-center justify-center gap-2 font-semibold\"
+                className="w-full py-4 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-all flex items-center justify-center gap-2 font-bold"
+                style={{ boxShadow: '0 4px 12px rgba(59,130,246,0.5)' }}
               >
-                <Play className=\"w-5 h-5\" />
-                5分タイマーを開始
+                <Play className="w-5 h-5" />
+                START 5-MIN TIMER
               </button>
             </div>
           </div>
         )}
 
-        {mode === 'timer' && selectedTask && (
-          <div className=\"space-y-6\">
-            <div className=\"text-center\">
-              <div className=\"text-9xl font-bold text-theme-accent-cyan mb-4\">
+        {/* TIMER PAGE */}
+        {currentPage === 'home' && mode === 'timer' && selectedTask && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="text-9xl font-bold text-blue-500 mb-4" style={{ textShadow: '0 4px 24px rgba(59,130,246,0.5)' }}>
                 {formatTime(timeLeft)}
               </div>
-              <div className=\"text-xl text-theme-primary mb-6\">
+              <div className="text-xl text-white mb-6">
                 {selectedTask.title}
               </div>
 
-              <div className=\"flex gap-3 justify-center mb-8\">
+              <div className="flex gap-3 justify-center mb-8">
                 <button
                   onClick={togglePause}
-                  className=\"py-3 px-6 rounded-lg glass-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors flex items-center gap-2\"
+                  className="py-3 px-6 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-300 transition-all flex items-center gap-2"
+                  style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
                 >
-                  {isPaused ? <Play className=\"w-5 h-5\" /> : <Pause className=\"w-5 h-5\" />}
-                  {isPaused ? '再開' : '一時停止'}
+                  {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                  {isPaused ? 'RESUME' : 'PAUSE'}
                 </button>
                 <button
                   onClick={() => {
                     setIsRunning(false);
                     setMode('complete');
                   }}
-                  className=\"py-3 px-6 rounded-lg glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] flex items-center gap-2\"
+                  className="py-3 px-6 rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-all flex items-center gap-2"
+                  style={{ boxShadow: '0 4px 12px rgba(59,130,246,0.5)' }}
                 >
-                  <Check className=\"w-5 h-5\" />
-                  完了
+                  <Check className="w-5 h-5" />
+                  COMPLETE
                 </button>
               </div>
             </div>
 
             {/* Chat Interface */}
-            <div className=\"p-4 rounded-lg glass-card border border-theme-default\">
-              <div className=\"flex items-center gap-2 mb-3 text-sm text-theme-secondary\">
-                <MessageCircle className=\"w-4 h-4\" />
-                質問・相談
+            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <div className="flex items-center gap-2 mb-3 text-xs text-gray-400">
+                <MessageCircle className="w-4 h-4" />
+                ASK AI COACH
               </div>
               
-              <div className=\"space-y-2 mb-3 max-h-48 overflow-y-auto\">
+              <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
                 {chatMessages.map((msg, i) => (
                   <div
                     key={i}
-                    className={`p-2 rounded text-sm leading-relaxed ${
+                    className={`p-2 rounded-lg text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[rgba(34,211,238,0.1)] text-theme-accent-cyan ml-8'
-                        : 'bg-theme-tertiary text-theme-secondary mr-8'
+                        ? 'bg-blue-500/20 text-blue-300 ml-8 border border-blue-500/30'
+                        : 'bg-black text-gray-300 mr-8 border border-gray-800'
                     }`}
                   >
                     {msg.content}
                   </div>
                 ))}
                 {isSendingMessage && (
-                  <div className=\"p-2 rounded text-sm bg-theme-tertiary text-theme-secondary mr-8 flex items-center gap-2\">
-                    <Loader className=\"w-3 h-3 animate-spin\" />
-                    考え中...
+                  <div className="p-2 rounded-lg text-sm bg-black text-gray-300 mr-8 border border-gray-800 flex items-center gap-2">
+                    <Loader className="w-3 h-3 animate-spin" />
+                    Thinking...
                   </div>
                 )}
               </div>
 
-              <div className=\"flex gap-2\">
+              <div className="flex gap-2">
                 <input
-                  type=\"text\"
+                  type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && sendMessage()}
-                  placeholder=\"質問を入力...\"
-                  className=\"flex-1 py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
+                  placeholder="Type your question..."
+                  className="flex-1 bg-black border border-gray-800 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
                   disabled={isSendingMessage}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={isSendingMessage}
-                  className=\"py-2 px-4 rounded glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] disabled:opacity-50\"
+                  className="py-2 px-4 rounded-lg bg-blue-500/20 border border-blue-500/50 text-blue-400 hover:bg-blue-500/30 disabled:opacity-50"
+                  style={{ boxShadow: '0 2px 6px rgba(59,130,246,0.3)' }}
                 >
                   {isSendingMessage ? (
-                    <Loader className=\"w-4 h-4 animate-spin\" />
+                    <Loader className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Send className=\"w-4 h-4\" />
+                    <Send className="w-4 h-4" />
                   )}
                 </button>
               </div>
@@ -688,37 +658,258 @@ export default function AlchemistCompass() {
           </div>
         )}
 
-        {mode === 'complete' && selectedTask && (
-          <div className=\"text-center space-y-6\">
-            <div className=\"text-6xl mb-4\">🎉</div>
-            <h2 className=\"text-2xl font-bold text-theme-primary\">お疲れさまでした！</h2>
-            <p className=\"text-theme-secondary\">{selectedTask.title}</p>
+        {/* COMPLETE PAGE */}
+        {currentPage === 'home' && mode === 'complete' && selectedTask && (
+          <div className="text-center space-y-6">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-white">TASK COMPLETED!</h2>
+            <p className="text-gray-400">{selectedTask.title}</p>
 
-            <div className=\"flex gap-3 justify-center\">
+            <div className="flex gap-3 justify-center">
               <button
                 onClick={() => completeTask('complete')}
-                className=\"py-3 px-6 rounded-lg glass-card border border-[rgba(52,211,153,0.4)] text-theme-accent-emerald hover:bg-[rgba(52,211,153,0.1)] flex items-center gap-2\"
+                className="py-3 px-6 rounded-xl bg-green-500/20 border border-green-500/50 text-green-400 hover:bg-green-500/30 flex items-center gap-2"
+                style={{ boxShadow: '0 2px 8px rgba(34,197,94,0.3)' }}
               >
-                <Check className=\"w-5 h-5\" />
-                完了
+                <Check className="w-5 h-5" />
+                DONE
               </button>
               <button
                 onClick={() => completeTask('defer')}
-                className=\"py-3 px-6 rounded-lg glass-card border border-theme-default hover:border-theme-hover text-theme-secondary flex items-center gap-2\"
+                className="py-3 px-6 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-400 flex items-center gap-2"
+                style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
               >
-                <Clock className=\"w-5 h-5\" />
-                保留
+                <Clock className="w-5 h-5" />
+                DEFER
               </button>
               <button
                 onClick={() => completeTask('drop')}
-                className=\"py-3 px-6 rounded-lg glass-card border border-red-500/30 text-red-400 hover:bg-red-500/10 flex items-center gap-2\"
+                className="py-3 px-6 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500/30 flex items-center gap-2"
+                style={{ boxShadow: '0 2px 6px rgba(239,68,68,0.3)' }}
               >
-                <Archive className=\"w-5 h-5\" />
-                削除
+                <Archive className="w-5 h-5" />
+                DROP
               </button>
             </div>
           </div>
         )}
+
+        {/* ANALYTICS PAGE */}
+        {currentPage === 'analytics' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold mb-6">ANALYTICS DASHBOARD</h2>
+            
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="text-3xl font-bold text-blue-500">{allTasks.length}</div>
+                <div className="text-xs text-gray-500 mt-1">TOTAL TASKS</div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="text-3xl font-bold text-cyan-500">{tasks.want.length}</div>
+                <div className="text-xs text-gray-500 mt-1">WANT TASKS</div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="text-3xl font-bold text-green-500">{tasks.should.length}</div>
+                <div className="text-xs text-gray-500 mt-1">SHOULD TASKS</div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                <div className="text-3xl font-bold text-purple-500">{avgScore}</div>
+                <div className="text-xs text-gray-500 mt-1">AVG SCORE</div>
+              </div>
+            </div>
+
+            {/* Chart Placeholder */}
+            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <h3 className="text-sm font-bold mb-4 text-gray-400">TASK DISTRIBUTION</h3>
+              <div className="h-48 flex items-end justify-around gap-2">
+                {[65, 45, 80, 55, 70, 60, 85].map((height, i) => (
+                  <div 
+                    key={i} 
+                    className="flex-1 bg-gradient-to-t from-blue-500 to-cyan-500 rounded-t transition-all duration-500" 
+                    style={{ 
+                      height: `${height}%`, 
+                      boxShadow: '0 -2px 8px rgba(59,130,246,0.4)' 
+                    }} 
+                  />
+                ))}
+              </div>
+              <div className="flex justify-around mt-2 text-xs text-gray-600">
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+                <span>Sun</span>
+              </div>
+            </div>
+
+            {/* Task Summary */}
+            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <h3 className="text-sm font-bold mb-4 text-gray-400">RECENT ACTIVITY</h3>
+              {allTasks.length > 0 ? (
+                <div className="space-y-2">
+                  {allTasks.slice(0, 5).map((task) => (
+                    <div key={task.id} className="flex items-center justify-between p-3 bg-black rounded-lg border border-gray-800">
+                      <div className="flex-1">
+                        <div className="text-sm text-white">{task.title}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {task.category === 'want' ? 'WANT' : 'SHOULD'} • Score: {task.score}
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold" style={{ boxShadow: '0 2px 8px rgba(59,130,246,0.4)' }}>
+                        {task.score}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-600">
+                  <p className="text-sm">No activity yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SETTINGS PAGE */}
+        {currentPage === 'settings' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold mb-6">SETTINGS</h2>
+            
+            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs text-gray-400 block mb-2">GEMINI API KEY</label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="AIxxxxx..."
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500"
+                    style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }}
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                      Get API Key
+                    </a>
+                    {' • Free tier available'}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="text-xs text-gray-400 block mb-2">AI MODEL</label>
+                  <select 
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 text-white outline-none focus:border-blue-500" 
+                    style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }}
+                  >
+                    {modelOptions.map(model => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-1 flex gap-3 text-xs text-gray-600">
+                    <span>Speed: {modelOptions.find(m => m.id === selectedModel)?.speed}</span>
+                    <span>Quality: {modelOptions.find(m => m.id === selectedModel)?.quality}</span>
+                    <span>Cost: {modelOptions.find(m => m.id === selectedModel)?.cost}</span>
+                  </div>
+                </div>
+
+                {/* Toggle Switches */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-800">
+                  <span className="text-sm text-gray-400">NOTIFICATIONS</span>
+                  <button 
+                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                    className={`w-12 h-6 rounded-full relative transition-all ${
+                      notificationsEnabled ? 'bg-blue-500' : 'bg-gray-700'
+                    }`}
+                    style={notificationsEnabled ? { boxShadow: '0 2px 8px rgba(59,130,246,0.5)' } : { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }}
+                  >
+                    <div 
+                      className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${
+                        notificationsEnabled ? 'right-0.5' : 'left-0.5'
+                      }`}
+                      style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm text-gray-400">AUTO-EVALUATE</span>
+                  <button
+                    onClick={() => setAutoEvaluate(!autoEvaluate)}
+                    className={`w-12 h-6 rounded-full relative transition-all ${
+                      autoEvaluate ? 'bg-blue-500' : 'bg-gray-700'
+                    }`}
+                    style={autoEvaluate ? { boxShadow: '0 2px 8px rgba(59,130,246,0.5)' } : { boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${
+                        autoEvaluate ? 'right-0.5' : 'left-0.5'
+                      }`}
+                      style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Version Info */}
+            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>VERSION</span>
+                <span className="font-mono">1.0.0</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+                <span>BUILD</span>
+                <span className="font-mono">2025.10.07</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="border-t border-gray-800 bg-black" style={{ boxShadow: '0 -4px 12px rgba(0,0,0,0.5)' }}>
+        <div className="flex justify-around py-3">
+          <button
+            onClick={() => {
+              setCurrentPage('home');
+              setMode('list');
+            }}
+            className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
+              currentPage === 'home' ? 'text-blue-500' : 'text-gray-600 hover:text-gray-400'
+            }`}
+            style={currentPage === 'home' ? { boxShadow: '0 2px 12px rgba(59,130,246,0.4)' } : {}}
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-[10px] font-bold">HOME</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage('analytics')}
+            className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
+              currentPage === 'analytics' ? 'text-blue-500' : 'text-gray-600 hover:text-gray-400'
+            }`}
+            style={currentPage === 'analytics' ? { boxShadow: '0 2px 12px rgba(59,130,246,0.4)' } : {}}
+          >
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-[10px] font-bold">ANALYTICS</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage('settings')}
+            className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
+              currentPage === 'settings' ? 'text-blue-500' : 'text-gray-600 hover:text-gray-400'
+            }`}
+            style={currentPage === 'settings' ? { boxShadow: '0 2px 12px rgba(59,130,246,0.4)' } : {}}
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-[10px] font-bold">SETTINGS</span>
+          </button>
+        </div>
       </div>
     </div>
   );
