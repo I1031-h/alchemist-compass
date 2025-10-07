@@ -51,6 +51,9 @@ export default function AlchemistCompass() {
     if (savedTheme) {
       setSelectedTheme(savedTheme);
       applyTheme(savedTheme);
+    } else {
+      // Apply default theme on first load
+      applyTheme('linear');
     }
   }, []);
 
@@ -262,7 +265,7 @@ export default function AlchemistCompass() {
   const currentTasks = tasks[activeTab] || [];
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-mono">
+    <div className="min-h-screen bg-theme-primary text-theme-primary font-mono">
       {/* Grid Background */}
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
       
@@ -270,14 +273,14 @@ export default function AlchemistCompass() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Sparkles className="w-8 h-8 text-cyan-400" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+            <Sparkles className="w-8 h-8 text-theme-accent-cyan" />
+            <h1 className="text-2xl font-bold gradient-text">
               Alchemist's Compass
             </h1>
           </div>
           <div className="flex items-center gap-3">
             {apiKey ? (
-              <div className="text-xs text-emerald-400 flex items-center gap-1">
+              <div className="text-xs text-theme-accent-emerald flex items-center gap-1">
                 ✓ AI有効
               </div>
             ) : (
@@ -287,7 +290,7 @@ export default function AlchemistCompass() {
             )}
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="p-2 rounded bg-slate-900/60 border border-slate-800 hover:border-cyan-500/30 text-slate-400"
+              className="p-2 rounded bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -296,24 +299,24 @@ export default function AlchemistCompass() {
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className="mb-6 p-4 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800">
-            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+          <div className="mb-6 p-4 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-theme-primary">
               <Settings className="w-4 h-4" />
               設定
             </h3>
             <div className="space-y-4">
               {/* API Key */}
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Gemini API Key</label>
+                <label className="text-xs text-theme-secondary block mb-1">Gemini API Key</label>
                 <input
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="AIxxxxx..."
-                  className="w-full py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                  className="w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+                <p className="text-xs text-theme-tertiary mt-1">
+                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-theme-accent-cyan hover:underline">
                     API Keyを取得
                   </a>
                 </p>
@@ -321,11 +324,11 @@ export default function AlchemistCompass() {
 
               {/* Model Selection */}
               <div>
-                <label className="text-xs text-slate-400 block mb-1">AIモデル</label>
+                <label className="text-xs text-theme-secondary block mb-1">AIモデル</label>
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                  className="w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
                 >
                   {modelOptions.map(model => (
                     <option key={model.id} value={model.id}>
@@ -333,23 +336,23 @@ export default function AlchemistCompass() {
                     </option>
                   ))}
                 </select>
-                <div className="mt-1 flex gap-3 text-xs">
-                  <span className="text-slate-500">速度: {modelOptions.find(m => m.id === selectedModel)?.speed}</span>
-                  <span className="text-slate-500">品質: {modelOptions.find(m => m.id === selectedModel)?.quality}</span>
-                  <span className="text-slate-500">コスト: {modelOptions.find(m => m.id === selectedModel)?.cost}</span>
+                <div className="mt-1 flex gap-3 text-xs text-theme-tertiary">
+                  <span>速度: {modelOptions.find(m => m.id === selectedModel)?.speed}</span>
+                  <span>品質: {modelOptions.find(m => m.id === selectedModel)?.quality}</span>
+                  <span>コスト: {modelOptions.find(m => m.id === selectedModel)?.cost}</span>
                 </div>
               </div>
 
               {/* Theme Selection */}
               <div>
-                <label className="text-xs text-slate-400 block mb-1 flex items-center gap-1">
+                <label className="text-xs text-theme-secondary block mb-1 flex items-center gap-1">
                   <Palette className="w-3 h-3" />
                   UIテーマ
                 </label>
                 <select
                   value={selectedTheme}
                   onChange={(e) => setSelectedTheme(e.target.value)}
-                  className="w-full py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                  className="w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
                 >
                   {themeOptions.map(theme => (
                     <option key={theme.value} value={theme.value}>
@@ -370,8 +373,8 @@ export default function AlchemistCompass() {
                 onClick={() => setActiveTab('want')}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
                   activeTab === 'want'
-                    ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400'
-                    : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan'
+                    : 'bg-theme-card border border-theme-default text-theme-secondary hover:border-theme-hover'
                 }`}
               >
                 <div className="flex items-center justify-center gap-2">
@@ -383,8 +386,8 @@ export default function AlchemistCompass() {
                 onClick={() => setActiveTab('should')}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
                   activeTab === 'should'
-                    ? 'bg-violet-500/10 border border-violet-500/30 text-violet-400'
-                    : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-[rgba(167,139,250,0.1)] border border-[rgba(167,139,250,0.3)] text-theme-accent-violet'
+                    : 'bg-theme-card border border-theme-default text-theme-secondary hover:border-theme-hover'
                 }`}
               >
                 <div className="flex items-center justify-center gap-2">
@@ -398,20 +401,20 @@ export default function AlchemistCompass() {
             {!showAddTask ? (
               <button
                 onClick={() => setShowAddTask(true)}
-                className="w-full py-4 px-4 mb-4 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-cyan-500/30 text-slate-400 hover:text-cyan-400 transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 px-4 mb-4 rounded-lg bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary hover:text-theme-accent-cyan transition-all flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 タスクを追加
               </button>
             ) : (
-              <div className="mb-4 p-4 rounded-lg bg-slate-900/60 border border-cyan-500/30">
+              <div className="mb-4 p-4 rounded-lg bg-theme-card border border-theme-active">
                 <input
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isEvaluating && addTask()}
                   placeholder="何をしますか？"
-                  className="w-full bg-transparent border-none outline-none text-slate-100 mb-3"
+                  className="w-full bg-transparent border-none outline-none text-theme-primary mb-3"
                   autoFocus
                   disabled={isEvaluating}
                 />
@@ -419,7 +422,7 @@ export default function AlchemistCompass() {
                   <button
                     onClick={addTask}
                     disabled={isEvaluating}
-                    className="flex-1 py-2 px-4 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-2 px-4 rounded bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isEvaluating ? (
                       <>
@@ -436,7 +439,7 @@ export default function AlchemistCompass() {
                       setNewTaskTitle('');
                     }}
                     disabled={isEvaluating}
-                    className="py-2 px-4 rounded bg-slate-800/50 border border-slate-700 text-slate-400 hover:border-slate-600 text-sm disabled:opacity-50"
+                    className="py-2 px-4 rounded bg-theme-tertiary border border-theme-default text-theme-secondary hover:border-theme-hover text-sm disabled:opacity-50"
                   >
                     キャンセル
                   </button>
@@ -449,15 +452,15 @@ export default function AlchemistCompass() {
               {currentTasks.map(task => (
                 <div
                   key={task.id}
-                  className="w-full p-4 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800 hover:border-cyan-500/30 transition-all group"
+                  className="w-full p-4 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default hover:border-theme-active transition-all group"
                 >
                   <div className="flex items-start justify-between">
                     <button
                       onClick={() => selectTask(task)}
                       className="flex-1 text-left"
                     >
-                      <div className="font-semibold text-slate-100 mb-2">{task.title}</div>
-                      <div className="flex items-center gap-4 text-xs text-slate-500">
+                      <div className="font-semibold text-theme-primary mb-2">{task.title}</div>
+                      <div className="flex items-center gap-4 text-xs text-theme-tertiary">
                         <div className="flex items-center gap-1">
                           <Zap className="w-3 h-3" />
                           Impact: {task.impact}
@@ -471,22 +474,22 @@ export default function AlchemistCompass() {
                           {task.estimatedMinutes}分
                         </div>
                       </div>
-                      <div className="mt-2 text-xs text-cyan-400/80">
+                      <div className="mt-2 text-xs text-theme-accent-cyan opacity-80">
                         {task.reason}
                       </div>
                     </button>
                     <div className="flex items-center gap-3 ml-4">
-                      <div className="text-2xl font-bold text-cyan-400">
+                      <div className="text-2xl font-bold text-theme-accent-cyan">
                         {task.score}
                       </div>
                       <button
                         onClick={(e) => deleteTask(e, task.id)}
-                        className="p-2 rounded hover:bg-red-500/10 text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 rounded hover:bg-red-500/10 text-theme-tertiary hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                         title="削除"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                      <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-cyan-400 transition-colors" />
+                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-accent-cyan transition-colors" />
                     </div>
                   </div>
                 </div>
@@ -494,7 +497,7 @@ export default function AlchemistCompass() {
             </div>
 
             {currentTasks.length === 0 && (
-              <div className="text-center py-12 text-slate-500">
+              <div className="text-center py-12 text-theme-tertiary">
                 <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>タスクがありません</p>
                 <p className="text-xs mt-1">上のボタンから追加してください</p>
@@ -507,41 +510,41 @@ export default function AlchemistCompass() {
           <div className="space-y-6">
             <button
               onClick={() => setMode('list')}
-              className="text-sm text-slate-400 hover:text-cyan-400 flex items-center gap-1"
+              className="text-sm text-theme-secondary hover:text-theme-accent-cyan flex items-center gap-1 transition-colors"
             >
               ← 戻る
             </button>
 
-            <div className="p-6 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800">
-              <h2 className="text-xl font-bold mb-4">{selectedTask.title}</h2>
+            <div className="p-6 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default">
+              <h2 className="text-xl font-bold mb-4 text-theme-primary">{selectedTask.title}</h2>
               
               {isLoadingGuide ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader className="w-8 h-8 animate-spin text-cyan-400" />
+                  <Loader className="w-8 h-8 animate-spin text-theme-accent-cyan" />
                 </div>
               ) : guide && (
                 <>
-                  <div className="mb-6 p-4 rounded bg-cyan-500/5 border border-cyan-500/20">
-                    <div className="text-sm font-semibold text-cyan-400 mb-2">なぜこのアプローチが合うか</div>
-                    <p className="text-sm text-slate-300">
+                  <div className="mb-6 p-4 rounded bg-[rgba(34,211,238,0.05)] border border-[rgba(34,211,238,0.2)]">
+                    <div className="text-sm font-semibold text-theme-accent-cyan mb-2">なぜこのアプローチが合うか</div>
+                    <p className="text-sm text-theme-secondary">
                       {guide.approach}
                     </p>
                   </div>
 
                   <div className="mb-6">
-                    <div className="text-sm font-semibold text-slate-300 mb-3">推奨ステップ</div>
+                    <div className="text-sm font-semibold text-theme-primary mb-3">推奨ステップ</div>
                     <div className="space-y-2">
                       {guide.steps.map((step, i) => (
-                        <div key={i} className="p-3 rounded bg-slate-800/50 border border-slate-700 text-sm">
+                        <div key={i} className="p-3 rounded bg-theme-tertiary border border-theme-default text-sm text-theme-primary">
                           {i + 1}. {step}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mb-6 p-4 rounded bg-emerald-500/5 border border-emerald-500/20">
-                    <div className="text-sm font-semibold text-emerald-400 mb-2">完了基準</div>
-                    <p className="text-sm text-slate-300">
+                  <div className="mb-6 p-4 rounded bg-[rgba(52,211,153,0.05)] border border-[rgba(52,211,153,0.2)]">
+                    <div className="text-sm font-semibold text-theme-accent-emerald mb-2">完了基準</div>
+                    <p className="text-sm text-theme-secondary">
                       {guide.completion}
                     </p>
                   </div>
@@ -550,7 +553,7 @@ export default function AlchemistCompass() {
 
               <button
                 onClick={startTimer}
-                className="w-full py-4 px-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 transition-all flex items-center justify-center gap-2 font-semibold"
+                className="w-full py-4 px-4 rounded-lg bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] transition-all flex items-center justify-center gap-2 font-semibold"
               >
                 <Play className="w-5 h-5" />
                 5分タイマーを開始
@@ -562,17 +565,17 @@ export default function AlchemistCompass() {
         {mode === 'timer' && selectedTask && (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="text-9xl font-bold text-cyan-400 mb-4">
+              <div className="text-9xl font-bold text-theme-accent-cyan mb-4">
                 {formatTime(timeLeft)}
               </div>
-              <div className="text-xl text-slate-300 mb-6">
+              <div className="text-xl text-theme-primary mb-6">
                 {selectedTask.title}
               </div>
 
               <div className="flex gap-3 justify-center mb-8">
                 <button
                   onClick={togglePause}
-                  className="py-3 px-6 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-cyan-500/30 text-slate-300 flex items-center gap-2"
+                  className="py-3 px-6 rounded-lg bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors flex items-center gap-2"
                 >
                   {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
                   {isPaused ? '再開' : '一時停止'}
@@ -582,7 +585,7 @@ export default function AlchemistCompass() {
                     setIsRunning(false);
                     setMode('complete');
                   }}
-                  className="py-3 px-6 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 flex items-center gap-2"
+                  className="py-3 px-6 rounded-lg bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] flex items-center gap-2"
                 >
                   <Check className="w-5 h-5" />
                   完了
@@ -591,8 +594,8 @@ export default function AlchemistCompass() {
             </div>
 
             {/* Chat Interface */}
-            <div className="p-4 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800">
-              <div className="flex items-center gap-2 mb-3 text-sm text-slate-400">
+            <div className="p-4 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default">
+              <div className="flex items-center gap-2 mb-3 text-sm text-theme-secondary">
                 <MessageCircle className="w-4 h-4" />
                 質問・相談
               </div>
@@ -603,15 +606,15 @@ export default function AlchemistCompass() {
                     key={i}
                     className={`p-2 rounded text-sm ${
                       msg.role === 'user'
-                        ? 'bg-cyan-500/10 text-cyan-100 ml-8'
-                        : 'bg-slate-800/50 text-slate-300 mr-8'
+                        ? 'bg-[rgba(34,211,238,0.1)] text-theme-accent-cyan ml-8'
+                        : 'bg-theme-tertiary text-theme-secondary mr-8'
                     }`}
                   >
                     {msg.content}
                   </div>
                 ))}
                 {isSendingMessage && (
-                  <div className="p-2 rounded text-sm bg-slate-800/50 text-slate-300 mr-8 flex items-center gap-2">
+                  <div className="p-2 rounded text-sm bg-theme-tertiary text-theme-secondary mr-8 flex items-center gap-2">
                     <Loader className="w-3 h-3 animate-spin" />
                     考え中...
                   </div>
@@ -625,13 +628,13 @@ export default function AlchemistCompass() {
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && sendMessage()}
                   placeholder="質問を入力..."
-                  className="flex-1 py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                  className="flex-1 py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
                   disabled={isSendingMessage}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={isSendingMessage}
-                  className="py-2 px-4 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 disabled:opacity-50"
+                  className="py-2 px-4 rounded bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] disabled:opacity-50"
                 >
                   {isSendingMessage ? (
                     <Loader className="w-4 h-4 animate-spin" />
@@ -647,20 +650,20 @@ export default function AlchemistCompass() {
         {mode === 'complete' && selectedTask && (
           <div className="text-center space-y-6">
             <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold">お疲れさまでした！</h2>
-            <p className="text-slate-400">{selectedTask.title}</p>
+            <h2 className="text-2xl font-bold text-theme-primary">お疲れさまでした！</h2>
+            <p className="text-theme-secondary">{selectedTask.title}</p>
 
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => completeTask('complete')}
-                className="py-3 px-6 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 flex items-center gap-2"
+                className="py-3 px-6 rounded-lg bg-[rgba(52,211,153,0.1)] border border-[rgba(52,211,153,0.3)] text-theme-accent-emerald hover:bg-[rgba(52,211,153,0.2)] flex items-center gap-2"
               >
                 <Check className="w-5 h-5" />
                 完了
               </button>
               <button
                 onClick={() => completeTask('defer')}
-                className="py-3 px-6 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-slate-700 text-slate-400 flex items-center gap-2"
+                className="py-3 px-6 rounded-lg bg-theme-card border border-theme-default hover:border-theme-hover text-theme-secondary flex items-center gap-2"
               >
                 <Clock className="w-5 h-5" />
                 保留

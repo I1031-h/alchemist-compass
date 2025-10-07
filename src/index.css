@@ -2,9 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables - Default theme */
+:root {
+  /* Background */
+  --bg-primary: #000000;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-card: rgba(15, 23, 42, 0.6);
+  
+  /* Borders */
+  --border-default: #334155;
+  --border-hover: #475569;
+  --border-active: rgba(34, 211, 238, 0.3);
+  
+  /* Accents */
+  --accent-cyan: #22d3ee;
+  --accent-blue: #60a5fa;
+  --accent-violet: #a78bfa;
+  --accent-emerald: #34d399;
+  --accent-coral: #ff6b6b;
+  --accent-orange: #ff8787;
+  --accent-white: #ffffff;
+  --accent-green: #48c9b0;
+  
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  
+  /* Effects */
+  --gradient: linear-gradient(to right, #22d3ee, #a78bfa);
+  --backdrop-blur: blur(20px);
+  --border-radius: 0.5rem;
+}
+
 body {
   margin: 0;
   font-family: ui-monospace, 'Cascadia Code', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Utility classes using CSS variables */
+.bg-theme-primary { background-color: var(--bg-primary); }
+.bg-theme-secondary { background-color: var(--bg-secondary); }
+.bg-theme-tertiary { background-color: var(--bg-tertiary); }
+.bg-theme-card { background-color: var(--bg-card); }
+
+.border-theme-default { border-color: var(--border-default); }
+.border-theme-hover:hover { border-color: var(--border-hover); }
+.border-theme-active { border-color: var(--border-active); }
+
+.text-theme-primary { color: var(--text-primary); }
+.text-theme-secondary { color: var(--text-secondary); }
+.text-theme-tertiary { color: var(--text-tertiary); }
+
+.text-theme-accent-cyan { color: var(--accent-cyan); }
+.text-theme-accent-violet { color: var(--accent-violet); }
+.text-theme-accent-emerald { color: var(--accent-emerald); }
+
+.bg-theme-accent-cyan { background-color: var(--accent-cyan); }
+.bg-theme-accent-violet { background-color: var(--accent-violet); }
+
+/* Gradient text */
+.gradient-text {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
