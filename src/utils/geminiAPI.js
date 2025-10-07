@@ -6,40 +6,69 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /**
- * Available Gemini models
+ * Available Gemini models (Updated October 2025)
  */
 export const GEMINI_MODELS = {
+  // Gemini 2.5 Series - Latest & Best
+  'gemini-2.5-flash': {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    description: '最高のコスパ・Thinking機能搭載（推奨）',
+    speed: '⚡⚡⚡',
+    quality: '⭐⭐⭐⭐',
+    cost: '💰',
+  },
+  'gemini-2.5-pro': {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    description: '最高品質・Deep Thinkingモード',
+    speed: '⚡⚡',
+    quality: '⭐⭐⭐⭐⭐',
+    cost: '💰💰💰',
+  },
+  'gemini-2.5-flash-lite': {
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash-Lite',
+    description: '最速・最低コスト・大量処理向け',
+    speed: '⚡⚡⚡⚡',
+    quality: '⭐⭐⭐',
+    cost: '💰 (最安)',
+  },
+  
+  // Gemini 2.0 Series
   'gemini-2.0-flash-exp': {
     id: 'gemini-2.0-flash-exp',
     name: 'Gemini 2.0 Flash (Experimental)',
-    description: '最速・低コスト（現在のデフォルト）',
-    speed: 'fast',
-    quality: 'good',
-    cost: 'low',
+    description: '実験版・高速',
+    speed: '⚡⚡⚡',
+    quality: '⭐⭐⭐',
+    cost: '💰',
   },
   'gemini-2.0-flash-thinking-exp-1219': {
     id: 'gemini-2.0-flash-thinking-exp-1219',
     name: 'Gemini 2.0 Flash Thinking',
-    description: '思考プロセス付き・高精度',
-    speed: 'medium',
-    quality: 'excellent',
-    cost: 'medium',
+    description: '思考プロセス付き',
+    speed: '⚡⚡',
+    quality: '⭐⭐⭐⭐',
+    cost: '💰💰',
   },
+  
+  // Gemini 1.5 Series - Stable
   'gemini-1.5-flash': {
     id: 'gemini-1.5-flash',
     name: 'Gemini 1.5 Flash',
     description: 'バランス型・安定版',
-    speed: 'fast',
-    quality: 'good',
-    cost: 'low',
+    speed: '⚡⚡⚡',
+    quality: '⭐⭐⭐',
+    cost: '💰',
   },
   'gemini-1.5-pro': {
     id: 'gemini-1.5-pro',
     name: 'Gemini 1.5 Pro',
-    description: '最高品質・複雑なタスク向け',
-    speed: 'slow',
-    quality: 'best',
-    cost: 'high',
+    description: '1.5世代の最高品質',
+    speed: '⚡⚡',
+    quality: '⭐⭐⭐⭐',
+    cost: '💰💰💰',
   },
 };
 
@@ -56,9 +85,16 @@ export function getModelOptions() {
  * @param {string} apiKey - Gemini API key
  * @param {string} model - Model ID
  * @param {number} temperature - Temperature setting (0.0-1.0)
+ * @param {number} maxOutputTokens - Maximum output tokens
  * @returns {Promise<string>} - Generated text
  */
-export async function callGeminiAPI(prompt, apiKey, model = 'gemini-2.0-flash-exp', temperature = 0.7) {
+export async function callGeminiAPI(
+  prompt, 
+  apiKey, 
+  model = 'gemini-2.5-flash', 
+  temperature = 0.7,
+  maxOutputTokens = 2000
+) {
   if (!apiKey) {
     throw new Error('Gemini API key not configured');
   }
@@ -79,16 +115,42 @@ export async function callGeminiAPI(prompt, apiKey, model = 'gemini-2.0-flash-ex
         }],
         generationConfig: {
           temperature,
-          maxOutputTokens: 1000,
-        }
+          maxOutputTokens,
+        },
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_NONE'
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_NONE'
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_NONE'
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_NONE'
+          }
+        ]
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData?.error?.message || `HTTP ${response.status}`;
+      throw new Error(`Gemini API error: ${errorMessage}`);
     }
 
     const data = await response.json();
+    
+    // Check if response has content
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error('No content in API response');
+    }
+    
     return data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('Gemini API call failed:', error);
@@ -105,56 +167,84 @@ export async function callGeminiAPI(prompt, apiKey, model = 'gemini-2.0-flash-ex
  * @param {string} model - Model ID
  * @returns {Promise<object>} - Task evaluation
  */
-export async function evaluateTask(title, category, userContext = {}, apiKey, model = 'gemini-2.0-flash-exp') {
-  const prompt = `
-あなたはパーソナルAIコーチです。以下のタスクを評価してください。
+export async function evaluateTask(title, category, userContext = {}, apiKey, model = 'gemini-2.5-flash') {
+  const prompt = `あなたはパーソナルAIコーチです。以下のタスクを評価してください。
 
-タスク: "${title}"
-カテゴリ: ${category === 'want' ? 'やりたいこと' : 'やるべきこと'}
+【タスク】
+"${title}"
 
-ユーザープロファイル:
-- 完璧主義傾向あり（MVP思考を推奨）
-- システム構築・自動化が得意
-- 効率性と洗練性を重視
-- Decision Flowを2時間で完成させた実績
+【カテゴリ】
+${category === 'want' ? 'やりたいこと（内発的動機）' : 'やるべきこと（外発的動機）'}
 
-以下の形式で評価してください:
+【ユーザープロファイル】
+- 22歳、独立したクリエイター・システムビルダー
+- 完璧主義傾向あり（MVP思考・Small Win戦略を推奨）
+- システム構築・自動化・効率化が得意
+- 効率性と洗練性を重視（「美しい仕組み」を好む）
+- Decision Flowを2時間で完成させた実績（高速プロトタイピング能力）
+- 知的好奇心が強く、深い分析を好む
+- 自律性とコントロール感を重視
+
+【評価基準】
+1. **Impact（影響度）**: このタスクが目標達成にどれだけ貢献するか
+   - ユーザーの価値観（効率性、自律性、創造性）との合致度
+   - スキル成長への寄与度
+   - 実際の成果物やポートフォリオへの影響
+   - 7-10の整数で評価
+
+2. **Ease（始めやすさ）**: 今すぐ取り掛かれるか
+   - 必要なリソースの準備状況
+   - 認知的負荷の低さ
+   - 最初の一歩の明確さ
+   - 6-10の整数で評価
+
+3. **EstimatedMinutes**: 実際の所要時間（15, 30, 45, 60のいずれか）
+
+4. **Reason**: このタスクを推奨する理由
+   - ユーザーの強みをどう活かせるか
+   - なぜ今やるべきか
+   - 40-60文字で具体的に
+
+【出力形式】
+以下のJSON形式**のみ**で回答してください。説明文は不要です。
 
 {
-  "impact": 7-10の整数（目標達成への影響度）,
-  "ease": 6-10の整数（今すぐ始めやすさ）,
-  "estimatedMinutes": 15, 30, 45, 60のいずれか,
-  "reason": "このタスクを推奨する理由（30文字以内）"
+  "impact": 7-10の整数,
+  "ease": 6-10の整数,
+  "estimatedMinutes": 15 or 30 or 45 or 60,
+  "reason": "推奨理由（40-60文字）"
 }
-
-JSON形式のみで回答してください。
 `;
 
   try {
-    const text = await callGeminiAPI(prompt, apiKey, model, 0.7);
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const evaluation = JSON.parse(jsonMatch[0]);
-      return {
-        impact: evaluation.impact,
-        ease: evaluation.ease,
-        estimatedMinutes: evaluation.estimatedMinutes,
-        reason: evaluation.reason,
-        score: evaluation.impact * evaluation.ease
-      };
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.7, 1000);
+    
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
     }
+    
+    const evaluation = JSON.parse(jsonMatch[0]);
+    
+    // Validate response
+    if (!evaluation.impact || !evaluation.ease || !evaluation.estimatedMinutes || !evaluation.reason) {
+      throw new Error('Incomplete evaluation data');
+    }
+    
+    return {
+      impact: Math.max(7, Math.min(10, evaluation.impact)),
+      ease: Math.max(6, Math.min(10, evaluation.ease)),
+      estimatedMinutes: [15, 30, 45, 60].includes(evaluation.estimatedMinutes) 
+        ? evaluation.estimatedMinutes 
+        : 30,
+      reason: evaluation.reason.slice(0, 100),
+      score: evaluation.impact * evaluation.ease
+    };
   } catch (error) {
     console.error('Task evaluation failed:', error);
+    throw new Error(`タスク評価に失敗しました: ${error.message}`);
   }
-
-  // Fallback to mock evaluation
-  return {
-    impact: Math.floor(Math.random() * 4) + 7,
-    ease: Math.floor(Math.random() * 5) + 6,
-    estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
-    reason: 'AI評価に失敗しました（Mock）',
-    score: 0
-  };
 }
 
 /**
@@ -165,47 +255,81 @@ JSON形式のみで回答してください。
  * @param {string} model - Model ID
  * @returns {Promise<object>} - Execution guide
  */
-export async function generateGuide(task, userContext = {}, apiKey, model = 'gemini-2.0-flash-exp') {
-  const prompt = `
-タスク: "${task.title}"
-カテゴリ: ${task.category === 'want' ? 'やりたいこと' : 'やるべきこと'}
+export async function generateGuide(task, userContext = {}, apiKey, model = 'gemini-2.5-flash') {
+  const prompt = `あなたはパーソナルAIコーチです。以下のタスクの実行ガイドを生成してください。
 
-ユーザープロファイル:
-- 完璧主義傾向あり
-- MVP思考を推奨
+【タスク】
+"${task.title}"
+
+【タスク評価】
+- Impact: ${task.impact}/10
+- Ease: ${task.ease}/10
+- 推定時間: ${task.estimatedMinutes}分
+- カテゴリ: ${task.category === 'want' ? 'やりたいこと' : 'やるべきこと'}
+
+【ユーザープロファイル】
+- 完璧主義傾向あり → MVP思考・Small Win戦略を推奨
 - Decision Flowを2時間で完成させた実績
+- 高速プロトタイピング能力
+- システム思考・効率重視
+- 自律性を重んじる
 
-このタスクの実行ガイドを生成してください:
+【ガイド生成の方針】
+1. **Approach**: なぜこのアプローチがユーザーに合うか
+   - ユーザーの強み（システム思考、高速実装）との接続
+   - 完璧主義を回避するための戦略
+   - 60-80文字で具体的に
+
+2. **Steps**: 実行ステップ（3-4ステップ）
+   - 各ステップは具体的なアクション
+   - 最初のステップは即座に実行可能
+   - MVP思考：最小限で動くものを優先
+   - 各ステップ50-80文字
+
+3. **Completion**: 完了基準
+   - 「完璧」ではなく「十分」のライン
+   - 測定可能な基準
+   - 40-60文字
+
+【出力形式】
+以下のJSON形式**のみ**で回答してください。
 
 {
-  "approach": "なぜこのアプローチが合うか（50文字以内）",
-  "steps": ["ステップ1", "ステップ2", "ステップ3"],
-  "completion": "完了基準（30文字以内）"
+  "approach": "なぜこのアプローチが合うか（60-80文字）",
+  "steps": [
+    "ステップ1の具体的なアクション（50-80文字）",
+    "ステップ2の具体的なアクション（50-80文字）",
+    "ステップ3の具体的なアクション（50-80文字）"
+  ],
+  "completion": "完了基準（40-60文字）"
 }
-
-JSON形式のみで回答してください。
 `;
 
   try {
-    const text = await callGeminiAPI(prompt, apiKey, model, 0.8);
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.8, 1500);
+    
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
     }
+    
+    const guide = JSON.parse(jsonMatch[0]);
+    
+    // Validate response
+    if (!guide.approach || !guide.steps || !Array.isArray(guide.steps) || !guide.completion) {
+      throw new Error('Incomplete guide data');
+    }
+    
+    return {
+      approach: guide.approach.slice(0, 150),
+      steps: guide.steps.map(step => step.slice(0, 150)),
+      completion: guide.completion.slice(0, 100)
+    };
   } catch (error) {
     console.error('Guide generation failed:', error);
+    throw new Error(`ガイド生成に失敗しました: ${error.message}`);
   }
-
-  // Fallback guide
-  return {
-    approach: 'MVP思考で素早く形にすることを重視',
-    steps: [
-      '最小限の機能を定義する',
-      '2時間で動くプロトタイプを作る',
-      'フィードバックを得て改善する'
-    ],
-    completion: '動作するバージョンを完成させる'
-  };
 }
 
 /**
@@ -217,30 +341,42 @@ JSON形式のみで回答してください。
  * @param {string} model - Model ID
  * @returns {Promise<string>} - AI response
  */
-export async function getChatResponse(message, taskContext, chatHistory = [], apiKey, model = 'gemini-2.0-flash-exp') {
+export async function getChatResponse(message, taskContext, chatHistory = [], apiKey, model = 'gemini-2.5-flash') {
   const historyText = chatHistory.slice(-4).map(msg => 
     `${msg.role === 'user' ? 'ユーザー' : 'AI'}: ${msg.content}`
   ).join('\n');
 
-  const prompt = `
-あなたはパーソナルコーチです。実行中のタスクについて簡潔に答えてください。
+  const elapsedMinutes = Math.floor((5 * 60 - taskContext.timeLeft) / 60);
+  const remainingMinutes = Math.floor(taskContext.timeLeft / 60);
 
-現在のタスク: "${taskContext.title}"
-経過時間: ${Math.floor((5 * 60 - taskContext.timeLeft) / 60)}分
+  const prompt = `あなたはパーソナルAIコーチです。実行中のタスクについて答えてください。
 
-過去の会話:
-${historyText}
+【現在の状況】
+- タスク: "${taskContext.title}"
+- 経過時間: ${elapsedMinutes}分
+- 残り時間: ${remainingMinutes}分
 
-ユーザーの質問: "${message}"
+【過去の会話】
+${historyText || 'なし'}
 
-50文字以内で答えてください。完璧主義を避け、行動を促すトーンで。
+【ユーザーの質問】
+"${message}"
+
+【応答の方針】
+- 完璧主義を避け、行動を促すトーンで
+- 具体的で実用的なアドバイス
+- ユーザーの強み（システム思考、高速実装）を活かす
+- 80-120文字で簡潔に
+- 必要に応じて質問で問い返す
+
+【応答】
 `;
 
   try {
-    const text = await callGeminiAPI(prompt, apiKey, model, 0.9);
-    return text.trim().slice(0, 200); // Max 200 chars
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.9, 500);
+    return text.trim().slice(0, 300);
   } catch (error) {
     console.error('Chat response failed:', error);
-    return '考えすぎず、まず手を動かしましょう。小さな一歩から始めてください。';
+    throw new Error(`チャット応答に失敗しました: ${error.message}`);
   }
 }

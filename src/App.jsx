@@ -19,7 +19,7 @@ export default function AlchemistCompass() {
 
   // Settings
   const [apiKey, setApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash-exp');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [selectedTheme, setSelectedTheme] = useState('linear');
   const [showSettings, setShowSettings] = useState(false);
   
@@ -28,6 +28,9 @@ export default function AlchemistCompass() {
   const [guide, setGuide] = useState(null);
   const [isLoadingGuide, setIsLoadingGuide] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  
+  // Error state
+  const [errorMessage, setErrorMessage] = useState('');
 
   const themeOptions = getThemeOptions();
   const modelOptions = getModelOptions();
@@ -52,7 +55,6 @@ export default function AlchemistCompass() {
       setSelectedTheme(savedTheme);
       applyTheme(savedTheme);
     } else {
-      // Apply default theme on first load
       applyTheme('linear');
     }
   }, []);
@@ -116,6 +118,7 @@ export default function AlchemistCompass() {
     if (!newTaskTitle.trim()) return;
     
     setIsEvaluating(true);
+    setErrorMessage('');
     
     try {
       let evaluation;
@@ -128,7 +131,7 @@ export default function AlchemistCompass() {
           impact,
           ease,
           estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
-          reason: 'AI設定後により精度の高い評価が可能になります',
+          reason: 'API Keyを設定するとAI評価が有効になります',
           score: impact * ease
         };
       }
@@ -150,7 +153,10 @@ export default function AlchemistCompass() {
       setShowAddTask(false);
     } catch (error) {
       console.error('Task evaluation failed:', error);
-      alert('タスク評価に失敗しました');
+      setErrorMessage(error.message || 'タスク評価に失敗しました。API Keyやモデル設定を確認してください。');
+      
+      // Show error for 5 seconds
+      setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setIsEvaluating(false);
     }
@@ -161,6 +167,7 @@ export default function AlchemistCompass() {
     setMode('guide');
     setChatMessages([]);
     setGuide(null);
+    setErrorMessage('');
     
     if (apiKey) {
       setIsLoadingGuide(true);
@@ -170,26 +177,26 @@ export default function AlchemistCompass() {
       } catch (error) {
         console.error('Guide generation failed:', error);
         setGuide({
-          approach: 'MVP思考で素早く形にすることを重視',
+          approach: 'MVP思考で素早く形にすることを重視。Decision Flowのよ2時間完成を目指しましょう。',
           steps: [
-            '最小限の機能を定義する',
-            '2時間で動くプロトタイプを作る',
-            'フィードバックを得て改善する'
+            '最小限の機能（1-2機能）を紙に書き出し、優先度を決める（2分）',
+            'プロトタイプを作成。完璧でなくてOK、まず動くものを（60分）',
+            'テストして改善点をリストアップ。フィードバックループを開始（30分）'
           ],
-          completion: '動作するバージョンを完成させる'
+          completion: '動作するMVPが完成し、次の改善点が明確になっていること'
         });
       } finally {
         setIsLoadingGuide(false);
       }
     } else {
       setGuide({
-        approach: 'MVP思考で素早く形にすることを重視',
+        approach: 'MVP思考で素早く形にすることを重視。Decision Flowのよ2時間完成を目指しましょう。',
         steps: [
-          '最小限の機能を定義する',
-          '2時間で動くプロトタイプを作る',
-          'フィードバックを得て改善する'
+          '最小限の機能（1-2機能）を紙に書き出し、優先度を決める（2分）',
+          'プロトタイプを作成。完璧でなくてOK、まず動くものを（60分）',
+          'テストして改善点をリストアップ。フィードバックループを開始（30分）'
         ],
-        completion: '動作するバージョンを完成させる'
+        completion: '動作するMVPが完成し、次の改善点が明確になっていること'
       });
     }
   };
@@ -285,7 +292,7 @@ export default function AlchemistCompass() {
               </div>
             ) : (
               <div className="text-xs text-amber-400 flex items-center gap-1">
-                ⚠ AI未設定
+                ⚠ API Key未設定
               </div>
             )}
             <button
@@ -296,6 +303,13 @@ export default function AlchemistCompass() {
             </button>
           </div>
         </div>
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+            {errorMessage}
+          </div>
+        )}
 
         {/* Settings Panel */}
         {showSettings && (
@@ -319,12 +333,13 @@ export default function AlchemistCompass() {
                   <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-theme-accent-cyan hover:underline">
                     API Keyを取得
                   </a>
+                  　|　利用料は無料枠内で十分使えます
                 </p>
               </div>
 
               {/* Model Selection */}
               <div>
-                <label className="text-xs text-theme-secondary block mb-1">AIモデル</label>
+                <label className="text-xs text-theme-secondary block mb-1">AIモデル　（推奨: Gemini 2.5 Flash）</label>
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
@@ -427,7 +442,7 @@ export default function AlchemistCompass() {
                     {isEvaluating ? (
                       <>
                         <Loader className="w-4 h-4 animate-spin" />
-                        評価中...
+                        AI評価中...
                       </>
                     ) : (
                       '追加'
@@ -437,6 +452,7 @@ export default function AlchemistCompass() {
                     onClick={() => {
                       setShowAddTask(false);
                       setNewTaskTitle('');
+                      setErrorMessage('');
                     }}
                     disabled={isEvaluating}
                     className="py-2 px-4 rounded bg-theme-tertiary border border-theme-default text-theme-secondary hover:border-theme-hover text-sm disabled:opacity-50"
@@ -526,7 +542,7 @@ export default function AlchemistCompass() {
                 <>
                   <div className="mb-6 p-4 rounded bg-[rgba(34,211,238,0.05)] border border-[rgba(34,211,238,0.2)]">
                     <div className="text-sm font-semibold text-theme-accent-cyan mb-2">なぜこのアプローチが合うか</div>
-                    <p className="text-sm text-theme-secondary">
+                    <p className="text-sm text-theme-secondary leading-relaxed">
                       {guide.approach}
                     </p>
                   </div>
@@ -535,7 +551,7 @@ export default function AlchemistCompass() {
                     <div className="text-sm font-semibold text-theme-primary mb-3">推奨ステップ</div>
                     <div className="space-y-2">
                       {guide.steps.map((step, i) => (
-                        <div key={i} className="p-3 rounded bg-theme-tertiary border border-theme-default text-sm text-theme-primary">
+                        <div key={i} className="p-3 rounded bg-theme-tertiary border border-theme-default text-sm text-theme-primary leading-relaxed">
                           {i + 1}. {step}
                         </div>
                       ))}
@@ -544,7 +560,7 @@ export default function AlchemistCompass() {
 
                   <div className="mb-6 p-4 rounded bg-[rgba(52,211,153,0.05)] border border-[rgba(52,211,153,0.2)]">
                     <div className="text-sm font-semibold text-theme-accent-emerald mb-2">完了基準</div>
-                    <p className="text-sm text-theme-secondary">
+                    <p className="text-sm text-theme-secondary leading-relaxed">
                       {guide.completion}
                     </p>
                   </div>
@@ -604,7 +620,7 @@ export default function AlchemistCompass() {
                 {chatMessages.map((msg, i) => (
                   <div
                     key={i}
-                    className={`p-2 rounded text-sm ${
+                    className={`p-2 rounded text-sm leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-[rgba(34,211,238,0.1)] text-theme-accent-cyan ml-8'
                         : 'bg-theme-tertiary text-theme-secondary mr-8'
