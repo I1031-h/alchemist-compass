@@ -3,22 +3,70 @@
  * Handles task evaluation, guide generation, and chat responses
  */
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+/**
+ * Available Gemini models
+ */
+export const GEMINI_MODELS = {
+  'gemini-2.0-flash-exp': {
+    id: 'gemini-2.0-flash-exp',
+    name: 'Gemini 2.0 Flash (Experimental)',
+    description: '最速・低コスト（現在のデフォルト）',
+    speed: 'fast',
+    quality: 'good',
+    cost: 'low',
+  },
+  'gemini-2.0-flash-thinking-exp-1219': {
+    id: 'gemini-2.0-flash-thinking-exp-1219',
+    name: 'Gemini 2.0 Flash Thinking',
+    description: '思考プロセス付き・高精度',
+    speed: 'medium',
+    quality: 'excellent',
+    cost: 'medium',
+  },
+  'gemini-1.5-flash': {
+    id: 'gemini-1.5-flash',
+    name: 'Gemini 1.5 Flash',
+    description: 'バランス型・安定版',
+    speed: 'fast',
+    quality: 'good',
+    cost: 'low',
+  },
+  'gemini-1.5-pro': {
+    id: 'gemini-1.5-pro',
+    name: 'Gemini 1.5 Pro',
+    description: '最高品質・複雑なタスク向け',
+    speed: 'slow',
+    quality: 'best',
+    cost: 'high',
+  },
+};
+
+/**
+ * Get model options for selector
+ */
+export function getModelOptions() {
+  return Object.values(GEMINI_MODELS);
+}
 
 /**
  * Call Gemini API with prompt
  * @param {string} prompt - The prompt to send
  * @param {string} apiKey - Gemini API key
+ * @param {string} model - Model ID
  * @param {number} temperature - Temperature setting (0.0-1.0)
  * @returns {Promise<string>} - Generated text
  */
-export async function callGeminiAPI(prompt, apiKey, temperature = 0.7) {
+export async function callGeminiAPI(prompt, apiKey, model = 'gemini-2.0-flash-exp', temperature = 0.7) {
   if (!apiKey) {
     throw new Error('Gemini API key not configured');
   }
 
+  const apiUrl = `${GEMINI_API_BASE}/${model}:generateContent`;
+
   try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const response = await fetch(`${apiUrl}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,9 +102,10 @@ export async function callGeminiAPI(prompt, apiKey, temperature = 0.7) {
  * @param {string} category - 'want' or 'should'
  * @param {object} userContext - User profile data
  * @param {string} apiKey - Gemini API key
+ * @param {string} model - Model ID
  * @returns {Promise<object>} - Task evaluation
  */
-export async function evaluateTask(title, category, userContext = {}, apiKey) {
+export async function evaluateTask(title, category, userContext = {}, apiKey, model = 'gemini-2.0-flash-exp') {
   const prompt = `
 あなたはパーソナルAIコーチです。以下のタスクを評価してください。
 
@@ -82,7 +131,7 @@ JSON形式のみで回答してください。
 `;
 
   try {
-    const text = await callGeminiAPI(prompt, apiKey, 0.7);
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.7);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const evaluation = JSON.parse(jsonMatch[0]);
@@ -113,9 +162,10 @@ JSON形式のみで回答してください。
  * @param {object} task - Task object
  * @param {object} userContext - User profile data
  * @param {string} apiKey - Gemini API key
+ * @param {string} model - Model ID
  * @returns {Promise<object>} - Execution guide
  */
-export async function generateGuide(task, userContext = {}, apiKey) {
+export async function generateGuide(task, userContext = {}, apiKey, model = 'gemini-2.0-flash-exp') {
   const prompt = `
 タスク: "${task.title}"
 カテゴリ: ${task.category === 'want' ? 'やりたいこと' : 'やるべきこと'}
@@ -137,7 +187,7 @@ JSON形式のみで回答してください。
 `;
 
   try {
-    const text = await callGeminiAPI(prompt, apiKey, 0.8);
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.8);
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
@@ -164,9 +214,10 @@ JSON形式のみで回答してください。
  * @param {object} taskContext - Current task context
  * @param {array} chatHistory - Previous messages
  * @param {string} apiKey - Gemini API key
+ * @param {string} model - Model ID
  * @returns {Promise<string>} - AI response
  */
-export async function getChatResponse(message, taskContext, chatHistory = [], apiKey) {
+export async function getChatResponse(message, taskContext, chatHistory = [], apiKey, model = 'gemini-2.0-flash-exp') {
   const historyText = chatHistory.slice(-4).map(msg => 
     `${msg.role === 'user' ? 'ユーザー' : 'AI'}: ${msg.content}`
   ).join('\n');
@@ -186,7 +237,7 @@ ${historyText}
 `;
 
   try {
-    const text = await callGeminiAPI(prompt, apiKey, 0.9);
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.9);
     return text.trim().slice(0, 200); // Max 200 chars
   } catch (error) {
     console.error('Chat response failed:', error);
