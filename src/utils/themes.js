@@ -8,7 +8,7 @@ export const themes = {
   linear: {
     id: 'linear',
     name: 'Linear',
-    description: 'モダン・洗練系（現在）',
+    description: 'モダン・洗練系（シアン/バイオレット）',
     colors: {
       bg: {
         primary: '#000000',
@@ -36,6 +36,42 @@ export const themes = {
     effects: {
       gradient: 'linear-gradient(to right, #22d3ee, #a78bfa)',
       backdropBlur: 'blur(20px)',
+      borderRadius: '0.5rem',
+    },
+  },
+
+  // v0 Generated Design - Orange/Coral
+  v0: {
+    id: 'v0',
+    name: 'v0 Design',
+    description: 'オレンジ/コーラル・グラデーション（v0生成）',
+    colors: {
+      bg: {
+        primary: '#1a2332',
+        secondary: '#243447',
+        tertiary: '#2d3e52',
+        card: 'rgba(26, 35, 50, 0.7)',
+      },
+      border: {
+        default: '#3d4f66',
+        hover: '#4a5d7a',
+        active: 'rgba(255, 107, 74, 0.4)',
+      },
+      accent: {
+        coral: '#ff6b4a',
+        orange: '#ff8a6b',
+        cyan: '#22d3ee',
+        emerald: '#34d399',
+      },
+      text: {
+        primary: '#f1f5f9',
+        secondary: '#94a3b8',
+        tertiary: '#64748b',
+      },
+    },
+    effects: {
+      gradient: 'linear-gradient(135deg, #ff6b4a, #ff8a6b)',
+      backdropBlur: 'blur(12px)',
       borderRadius: '0.5rem',
     },
   },
@@ -164,4 +200,12 @@ export function applyTheme(themeId) {
   root.style.setProperty('--gradient', theme.effects.gradient);
   root.style.setProperty('--backdrop-blur', theme.effects.backdropBlur);
   root.style.setProperty('--border-radius', theme.effects.borderRadius);
+  
+  // Add/remove grid background class based on theme
+  const body = document.body;
+  if (themeId === 'v0' || themeId === 'systematic') {
+    body.classList.add('grid-background');
+  } else {
+    body.classList.remove('grid-background');
+  }
 }

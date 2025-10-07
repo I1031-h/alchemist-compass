@@ -73,3 +73,75 @@ body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+/* v0 Design System - Grid background pattern */
+.grid-background {
+  background-image: 
+    linear-gradient(rgba(255, 107, 74, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 107, 74, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* v0 Design System - Glassmorphism effect */
+.glass-card {
+  background: rgba(26, 35, 50, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* v0 Design System - Gradient border animation */
+@keyframes gradient-rotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #ff6b4a, #ff8a6b, #ff6b4a);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gradient-border:hover::before {
+  opacity: 1;
+  animation: gradient-rotate 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+/* Score badge with glow effect */
+.score-badge {
+  background: linear-gradient(135deg, #ff6b4a, #ff8a6b);
+  box-shadow: 0 8px 24px rgba(255, 107, 74, 0.4);
+}
+
+/* Progress bar animations */
+.progress-bar {
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth scale animation */
+.scale-on-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scale-on-hover:hover {
+  transform: scale(1.02);
+}
