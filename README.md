@@ -8,10 +8,12 @@
 
 - **デュアルタブシステム**: Want（やりたいこと）/ Should（やるべきこと）を分離
 - **AI評価**: Gemini APIでタスクをImpact × Easeで自動スコアリング
+- **AIモデル選択**: 4つのGeminiモデルから選択可能
+- **UIテーマ切替**: 3つのデザインパターン（Linear/Systematic/Minimal）
 - **AIガイド生成**: あなた専用の実行ガイドを自動生成
 - **5分タイマー**: 考えすぎを防ぐ時間制限付き実行モード
 - **AIコーチング**: 実行中のリアルタイムQ&Aサポート
-- **モダンUI**: Linear/Vercel風の洗練されたデザイン
+- **タスク管理**: リストから直接削除可能
 
 ## 🚀 Quick Start
 
@@ -24,21 +26,29 @@ npm run dev
 
 Visit: http://localhost:3000
 
-### 2. Gemini API設定（推奨）
+### 2. 設定（右上⚙️アイコンから）
 
+**Gemini API設定**
 1. [Google AI Studio](https://aistudio.google.com/apikey) でAPI Keyを取得
-2. アプリ右上の⚙️設定アイコンをクリック
-3. API Keyを入力して保存
+2. API Keyを入力して保存
 
-**API Key設定前**: Mock評価で動作（機能制限あり）  
-**API Key設定後**: 本格的なAI評価とガイド生成が有効に
+**AIモデル選択**
+- `Gemini 2.0 Flash Exp`: 最速・低コスト（デフォルト）
+- `Gemini 2.0 Flash Thinking`: 思考プロセス付き・高精度
+- `Gemini 1.5 Flash`: バランス型・安定版
+- `Gemini 1.5 Pro`: 最高品質・複雑なタスク向け
+
+**UIテーマ選択**
+- `Linear`: モダン・洗練系（現在のデフォルト）
+- `Systematic`: システマティック・開発ツール系
+- `Minimal`: ミニマル・機能重視
 
 ## 📦 Tech Stack
 
 - **Frontend**: React 18 + Vite
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS + CSS Variables
 - **Icons**: Lucide React
-- **AI**: Gemini 2.0 Flash Exp API
+- **AI**: Gemini API (Multiple Models)
 - **Storage**: localStorage
 
 ## 🎯 Development Status
@@ -56,6 +66,11 @@ Visit: http://localhost:3000
 - カスタムガイド生成
 - AIチャット応答
 - フォールバック機能
+
+### Phase 2.5: Customization ✅ (New!)
+- **UIテーマシステム**: 3つのデザインパターン
+- **AIモデル選択**: 4つのGeminiモデル対応
+- **タスク削除機能**: 完了前でも削除可能
 
 ### Phase 3: Advanced Features (Planned)
 - 統計・振り返り機能
@@ -98,7 +113,7 @@ VITE_GEMINI_API_KEY=your_gemini_api_key_here
 
 ## 💰 API Cost Estimation
 
-Gemini 2.0 Flash Exp使用時：
+### Gemini 2.0 Flash Exp（デフォルト）
 
 ```
 1日の使用例:
@@ -111,16 +126,64 @@ Gemini 2.0 Flash Exp使用時：
 月額コスト: 約$1.50
 ```
 
+### モデル比較
+
+| モデル | 速度 | 品質 | コスト | 推奨用途 |
+|--------|------|------|--------|----------|
+| 2.0 Flash Exp | 最速 | 良い | 最安 | 日常使用 |
+| 2.0 Flash Thinking | 中速 | 最高 | 中 | 重要タスク |
+| 1.5 Flash | 速い | 良い | 安 | 安定重視 |
+| 1.5 Pro | 遅い | 最高 | 高 | 複雑な分析 |
+
 ## 🎨 Design Philosophy
 
-**"Beautiful Systems"を体現：**
-- モノスペースフォント（技術者の美学）
-- グリッド背景（構造の可視化）
-- シアン→バイオレットグラデーション
-- ガラスモーフィズム
-- 情報密度重視
+### テーマシステム
 
-**参考:** Linear, Vercel Dashboard, GitHub Copilot
+**Linear（デフォルト）**
+- モダン・洗練系
+- シアン→バイオレットグラデーション
+- Vercel/Linear風
+
+**Systematic**
+- プロフェッショナル・開発ツール系
+- ダークブルー + コーラル
+- 情報密度高
+
+**Minimal**
+- ミニマル・機能重視
+- シアン + ホワイト
+- 余白多め
+
+## 🎯 使い方のコツ
+
+### タスク追加
+```
+1. 「やりたいこと」または「やるべきこと」タブを選択
+2. タスクを入力
+3. AI評価を待つ（2-3秒）
+4. 自動的にスコア順にソート
+```
+
+### タスク削除
+```
+- リスト上でタスクにホバー
+- ゴミ箱アイコンが表示
+- クリックで削除確認
+```
+
+### モデル変更
+```
+設定 → AIモデル → 選択
+- タイマー時のチャット品質を高めたい → 2.0 Flash Thinking
+- コストを抑えたい → 2.0 Flash Exp（デフォルト）
+```
+
+### テーマ変更
+```
+設定 → UIテーマ → 選択
+- リアルタイムで反映
+- 選択内容は自動保存
+```
 
 ## 🤝 Related Projects
 
