@@ -20,7 +20,7 @@ export default function AlchemistCompass() {
   // Settings
   const [apiKey, setApiKey] = useState('');
   const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
-  const [selectedTheme, setSelectedTheme] = useState('linear');
+  const [selectedTheme, setSelectedTheme] = useState('v0');
   const [showSettings, setShowSettings] = useState(false);
   
   // Loading states
@@ -55,7 +55,7 @@ export default function AlchemistCompass() {
       setSelectedTheme(savedTheme);
       applyTheme(savedTheme);
     } else {
-      applyTheme('linear');
+      applyTheme('v0');
     }
   }, []);
 
@@ -155,7 +155,6 @@ export default function AlchemistCompass() {
       console.error('Task evaluation failed:', error);
       setErrorMessage(error.message || 'タスク評価に失敗しました。API Keyやモデル設定を確認してください。');
       
-      // Show error for 5 seconds
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setIsEvaluating(false);
@@ -177,7 +176,7 @@ export default function AlchemistCompass() {
       } catch (error) {
         console.error('Guide generation failed:', error);
         setGuide({
-          approach: 'MVP思考で素早く形にすることを重視。Decision Flowのよ2時間完成を目指しましょう。',
+          approach: 'MVP思考で素早く形にすることを重視。Decision Flowのような2時間完成を目指しましょう。',
           steps: [
             '最小限の機能（1-2機能）を紙に書き出し、優先度を決める（2分）',
             'プロトタイプを作成。完璧でなくてOK、まず動くものを（60分）',
@@ -190,7 +189,7 @@ export default function AlchemistCompass() {
       }
     } else {
       setGuide({
-        approach: 'MVP思考で素早く形にすることを重視。Decision Flowのよ2時間完成を目指しましょう。',
+        approach: 'MVP思考で素早く形にすることを重視。Decision Flowのような2時間完成を目指しましょう。',
         steps: [
           '最小限の機能（1-2機能）を紙に書き出し、優先度を決める（2分）',
           'プロトタイプを作成。完璧でなくてOK、まず動くものを（60分）',
@@ -272,78 +271,76 @@ export default function AlchemistCompass() {
   const currentTasks = tasks[activeTab] || [];
 
   return (
-    <div className="min-h-screen bg-theme-primary text-theme-primary font-mono">
+    <div className=\"min-h-screen bg-theme-primary text-theme-primary font-mono\">
       {/* Grid Background */}
-      <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+      <div className=\"fixed inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]\" />
       
-      <div className="relative max-w-5xl mx-auto p-6">
+      <div className=\"relative max-w-5xl mx-auto p-6\">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-8 h-8 text-theme-accent-cyan" />
-            <h1 className="text-2xl font-bold gradient-text">
+        <div className=\"flex items-center justify-between mb-8\">
+          <div className=\"flex items-center gap-3\">
+            <Sparkles className=\"w-8 h-8 text-theme-accent-cyan\" />
+            <h1 className=\"text-2xl font-bold gradient-text\">
               Alchemist's Compass
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className=\"flex items-center gap-3\">
             {apiKey ? (
-              <div className="text-xs text-theme-accent-emerald flex items-center gap-1">
+              <div className=\"text-xs text-theme-accent-emerald flex items-center gap-1\">
                 ✓ AI有効
               </div>
             ) : (
-              <div className="text-xs text-amber-400 flex items-center gap-1">
+              <div className=\"text-xs text-amber-400 flex items-center gap-1\">
                 ⚠ API Key未設定
               </div>
             )}
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="p-2 rounded bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors"
+              className=\"p-2 rounded bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors\"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className=\"w-4 h-4\" />
             </button>
           </div>
         </div>
 
         {/* Error Message */}
         {errorMessage && (
-          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          <div className=\"mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm\">
             {errorMessage}
           </div>
         )}
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className="mb-6 p-4 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default">
-            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-theme-primary">
-              <Settings className="w-4 h-4" />
+          <div className=\"mb-6 p-4 rounded-lg glass-card border border-theme-default\">
+            <h3 className=\"text-sm font-semibold mb-4 flex items-center gap-2 text-theme-primary\">
+              <Settings className=\"w-4 h-4\" />
               設定
             </h3>
-            <div className="space-y-4">
-              {/* API Key */}
+            <div className=\"space-y-4\">
               <div>
-                <label className="text-xs text-theme-secondary block mb-1">Gemini API Key</label>
+                <label className=\"text-xs text-theme-secondary block mb-1\">Gemini API Key</label>
                 <input
-                  type="password"
+                  type=\"password\"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="AIxxxxx..."
-                  className="w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
+                  placeholder=\"AIxxxxx...\"
+                  className=\"w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
                 />
-                <p className="text-xs text-theme-tertiary mt-1">
-                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-theme-accent-cyan hover:underline">
+                <p className=\"text-xs text-theme-tertiary mt-1\">
+                  <a href=\"https://aistudio.google.com/apikey\" target=\"_blank\" rel=\"noopener noreferrer\" className=\"text-theme-accent-cyan hover:underline\">
                     API Keyを取得
                   </a>
                   　|　利用料は無料枠内で十分使えます
                 </p>
               </div>
 
-              {/* Model Selection */}
               <div>
-                <label className="text-xs text-theme-secondary block mb-1">AIモデル　（推奨: Gemini 2.5 Flash）</label>
+                <label className=\"text-xs text-theme-secondary block mb-1\">AIモデル（推奨: Gemini 2.5 Flash）</label>
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
+                  className=\"w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
                 >
                   {modelOptions.map(model => (
                     <option key={model.id} value={model.id}>
@@ -351,23 +348,22 @@ export default function AlchemistCompass() {
                     </option>
                   ))}
                 </select>
-                <div className="mt-1 flex gap-3 text-xs text-theme-tertiary">
+                <div className=\"mt-1 flex gap-3 text-xs text-theme-tertiary\">
                   <span>速度: {modelOptions.find(m => m.id === selectedModel)?.speed}</span>
                   <span>品質: {modelOptions.find(m => m.id === selectedModel)?.quality}</span>
                   <span>コスト: {modelOptions.find(m => m.id === selectedModel)?.cost}</span>
                 </div>
               </div>
 
-              {/* Theme Selection */}
               <div>
-                <label className="text-xs text-theme-secondary block mb-1 flex items-center gap-1">
-                  <Palette className="w-3 h-3" />
+                <label className=\"text-xs text-theme-secondary block mb-1 flex items-center gap-1\">
+                  <Palette className=\"w-3 h-3\" />
                   UIテーマ
                 </label>
                 <select
                   value={selectedTheme}
                   onChange={(e) => setSelectedTheme(e.target.value)}
-                  className="w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
+                  className=\"w-full py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
                 >
                   {themeOptions.map(theme => (
                     <option key={theme.value} value={theme.value}>
@@ -383,17 +379,17 @@ export default function AlchemistCompass() {
         {mode === 'list' && (
           <>
             {/* Tab Navigation */}
-            <div className="flex gap-2 mb-6">
+            <div className=\"flex gap-2 mb-6\">
               <button
                 onClick={() => setActiveTab('want')}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
                   activeTab === 'want'
-                    ? 'bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan'
-                    : 'bg-theme-card border border-theme-default text-theme-secondary hover:border-theme-hover'
+                    ? 'glass-card border border-theme-active text-theme-accent-cyan'
+                    : 'glass-card border border-theme-default text-theme-secondary hover:border-theme-hover'
                 }`}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <Target className="w-4 h-4" />
+                <div className=\"flex items-center justify-center gap-2\">
+                  <Target className=\"w-4 h-4\" />
                   やりたいこと ({currentTasks.length})
                 </div>
               </button>
@@ -401,12 +397,12 @@ export default function AlchemistCompass() {
                 onClick={() => setActiveTab('should')}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
                   activeTab === 'should'
-                    ? 'bg-[rgba(167,139,250,0.1)] border border-[rgba(167,139,250,0.3)] text-theme-accent-violet'
-                    : 'bg-theme-card border border-theme-default text-theme-secondary hover:border-theme-hover'
+                    ? 'glass-card border border-[rgba(167,139,250,0.4)] text-theme-accent-violet'
+                    : 'glass-card border border-theme-default text-theme-secondary hover:border-theme-hover'
                 }`}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
+                <div className=\"flex items-center justify-center gap-2\">
+                  <AlertCircle className=\"w-4 h-4\" />
                   やるべきこと ({tasks.should?.length || 0})
                 </div>
               </button>
@@ -416,32 +412,32 @@ export default function AlchemistCompass() {
             {!showAddTask ? (
               <button
                 onClick={() => setShowAddTask(true)}
-                className="w-full py-4 px-4 mb-4 rounded-lg bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary hover:text-theme-accent-cyan transition-all flex items-center justify-center gap-2"
+                className=\"w-full py-4 px-4 mb-6 rounded-lg glass-card border border-theme-default hover:border-theme-active text-theme-secondary hover:text-theme-accent-cyan transition-all flex items-center justify-center gap-2\"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className=\"w-5 h-5\" />
                 タスクを追加
               </button>
             ) : (
-              <div className="mb-4 p-4 rounded-lg bg-theme-card border border-theme-active">
+              <div className=\"mb-6 p-4 rounded-lg glass-card border border-theme-active\">
                 <input
-                  type="text"
+                  type=\"text\"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isEvaluating && addTask()}
-                  placeholder="何をしますか？"
-                  className="w-full bg-transparent border-none outline-none text-theme-primary mb-3"
+                  placeholder=\"何をしますか？\"
+                  className=\"w-full bg-transparent border-none outline-none text-theme-primary mb-3\"
                   autoFocus
                   disabled={isEvaluating}
                 />
-                <div className="flex gap-2">
+                <div className=\"flex gap-2\">
                   <button
                     onClick={addTask}
                     disabled={isEvaluating}
-                    className="flex-1 py-2 px-4 rounded bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    className=\"flex-1 py-2 px-4 rounded glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] text-sm disabled:opacity-50 flex items-center justify-center gap-2\"
                   >
                     {isEvaluating ? (
                       <>
-                        <Loader className="w-4 h-4 animate-spin" />
+                        <Loader className=\"w-4 h-4 animate-spin\" />
                         AI評価中...
                       </>
                     ) : (
@@ -455,7 +451,7 @@ export default function AlchemistCompass() {
                       setErrorMessage('');
                     }}
                     disabled={isEvaluating}
-                    className="py-2 px-4 rounded bg-theme-tertiary border border-theme-default text-theme-secondary hover:border-theme-hover text-sm disabled:opacity-50"
+                    className=\"py-2 px-4 rounded glass-card border border-theme-default text-theme-secondary hover:border-theme-hover text-sm disabled:opacity-50\"
                   >
                     キャンセル
                   </button>
@@ -463,104 +459,133 @@ export default function AlchemistCompass() {
               </div>
             )}
 
-            {/* Task List */}
-            <div className="space-y-3">
+            {/* Task List - v0 Style */}
+            <div className=\"grid grid-cols-1 md:grid-cols-2 gap-4\">
               {currentTasks.map(task => (
                 <div
                   key={task.id}
-                  className="w-full p-4 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default hover:border-theme-active transition-all group"
+                  className=\"gradient-border rounded-lg p-6 glass-card scale-on-hover cursor-pointer relative group\"
+                  onClick={() => selectTask(task)}
                 >
-                  <div className="flex items-start justify-between">
-                    <button
-                      onClick={() => selectTask(task)}
-                      className="flex-1 text-left"
-                    >
-                      <div className="font-semibold text-theme-primary mb-2">{task.title}</div>
-                      <div className="flex items-center gap-4 text-xs text-theme-tertiary">
-                        <div className="flex items-center gap-1">
-                          <Zap className="w-3 h-3" />
-                          Impact: {task.impact}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Target className="w-3 h-3" />
-                          Ease: {task.ease}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {task.estimatedMinutes}分
-                        </div>
+                  {/* Score Badge - v0 Style */}
+                  <div className=\"absolute -top-3 -right-3 w-16 h-16 rounded-full score-badge flex items-center justify-center z-10\">
+                    <span className=\"text-2xl font-bold font-mono text-white\">{task.score}</span>
+                  </div>
+
+                  {/* Delete Button - Show on hover */}
+                  <button
+                    onClick={(e) => deleteTask(e, task.id)}
+                    className=\"absolute top-2 right-2 p-2 rounded hover:bg-red-500/10 text-theme-tertiary hover:text-red-400 transition-all opacity-0 group-hover:opacity-100\"
+                  >
+                    <Trash2 className=\"w-4 h-4\" />
+                  </button>
+
+                  {/* Task Title */}
+                  <h3 className=\"text-lg font-semibold mb-6 pr-12 text-theme-primary leading-relaxed\">
+                    {task.title}
+                  </h3>
+
+                  {/* Progress Bars - v0 Style */}
+                  <div className=\"space-y-3\">
+                    {/* Impact Bar */}
+                    <div className=\"flex items-center gap-3 text-sm\">
+                      <div className=\"flex items-center gap-2 text-theme-accent-coral min-w-[80px]\">
+                        <Zap className=\"w-4 h-4\" />
+                        <span className=\"font-mono\">Impact</span>
                       </div>
-                      <div className="mt-2 text-xs text-theme-accent-cyan opacity-80">
-                        {task.reason}
+                      <div className=\"flex-1 h-2 bg-theme-tertiary rounded-full overflow-hidden\">
+                        <div
+                          className=\"h-full bg-gradient-to-r from-[var(--accent-coral)] to-[var(--accent-orange)] progress-bar\"
+                          style={{ width: `${(task.impact / 10) * 100}%` }}
+                        />
                       </div>
-                    </button>
-                    <div className="flex items-center gap-3 ml-4">
-                      <div className="text-2xl font-bold text-theme-accent-cyan">
-                        {task.score}
+                      <span className=\"font-mono text-theme-secondary w-6 text-right\">{task.impact}</span>
+                    </div>
+
+                    {/* Ease Bar */}
+                    <div className=\"flex items-center gap-3 text-sm\">
+                      <div className=\"flex items-center gap-2 text-theme-accent-orange min-w-[80px]\">
+                        <Target className=\"w-4 h-4\" />
+                        <span className=\"font-mono\">Ease</span>
                       </div>
-                      <button
-                        onClick={(e) => deleteTask(e, task.id)}
-                        className="p-2 rounded hover:bg-red-500/10 text-theme-tertiary hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                        title="削除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <ChevronRight className="w-5 h-5 text-theme-tertiary group-hover:text-theme-accent-cyan transition-colors" />
+                      <div className=\"flex-1 h-2 bg-theme-tertiary rounded-full overflow-hidden\">
+                        <div
+                          className=\"h-full bg-gradient-to-r from-[var(--accent-orange)] to-[var(--accent-cyan)] progress-bar\"
+                          style={{ width: `${(task.ease / 10) * 100}%` }}
+                        />
+                      </div>
+                      <span className=\"font-mono text-theme-secondary w-6 text-right\">{task.ease}</span>
+                    </div>
+
+                    {/* Time */}
+                    <div className=\"flex items-center gap-3 text-sm pt-2\">
+                      <div className=\"flex items-center gap-2 text-theme-secondary min-w-[80px]\">
+                        <Clock className=\"w-4 h-4\" />
+                        <span className=\"font-mono\">Time</span>
+                      </div>
+                      <span className=\"font-mono text-theme-primary\">{task.estimatedMinutes}分</span>
                     </div>
                   </div>
+
+                  {/* Reason */}
+                  {task.reason && (
+                    <div className=\"mt-4 text-xs text-theme-accent-cyan opacity-80\">
+                      {task.reason}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             {currentTasks.length === 0 && (
-              <div className="text-center py-12 text-theme-tertiary">
-                <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <div className=\"text-center py-12 text-theme-tertiary\">
+                <Sparkles className=\"w-12 h-12 mx-auto mb-3 opacity-50\" />
                 <p>タスクがありません</p>
-                <p className="text-xs mt-1">上のボタンから追加してください</p>
+                <p className=\"text-xs mt-1\">上のボタンから追加してください</p>
               </div>
             )}
           </>
         )}
 
         {mode === 'guide' && selectedTask && (
-          <div className="space-y-6">
+          <div className=\"space-y-6\">
             <button
               onClick={() => setMode('list')}
-              className="text-sm text-theme-secondary hover:text-theme-accent-cyan flex items-center gap-1 transition-colors"
+              className=\"text-sm text-theme-secondary hover:text-theme-accent-cyan flex items-center gap-1 transition-colors\"
             >
               ← 戻る
             </button>
 
-            <div className="p-6 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default">
-              <h2 className="text-xl font-bold mb-4 text-theme-primary">{selectedTask.title}</h2>
+            <div className=\"p-6 rounded-lg glass-card border border-theme-default\">
+              <h2 className=\"text-xl font-bold mb-4 text-theme-primary\">{selectedTask.title}</h2>
               
               {isLoadingGuide ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader className="w-8 h-8 animate-spin text-theme-accent-cyan" />
+                <div className=\"flex items-center justify-center py-8\">
+                  <Loader className=\"w-8 h-8 animate-spin text-theme-accent-cyan\" />
                 </div>
               ) : guide && (
                 <>
-                  <div className="mb-6 p-4 rounded bg-[rgba(34,211,238,0.05)] border border-[rgba(34,211,238,0.2)]">
-                    <div className="text-sm font-semibold text-theme-accent-cyan mb-2">なぜこのアプローチが合うか</div>
-                    <p className="text-sm text-theme-secondary leading-relaxed">
+                  <div className=\"mb-6 p-4 rounded bg-[rgba(34,211,238,0.05)] border border-[rgba(34,211,238,0.2)]\">
+                    <div className=\"text-sm font-semibold text-theme-accent-cyan mb-2\">なぜこのアプローチが合うか</div>
+                    <p className=\"text-sm text-theme-secondary leading-relaxed\">
                       {guide.approach}
                     </p>
                   </div>
 
-                  <div className="mb-6">
-                    <div className="text-sm font-semibold text-theme-primary mb-3">推奨ステップ</div>
-                    <div className="space-y-2">
+                  <div className=\"mb-6\">
+                    <div className=\"text-sm font-semibold text-theme-primary mb-3\">推奨ステップ</div>
+                    <div className=\"space-y-2\">
                       {guide.steps.map((step, i) => (
-                        <div key={i} className="p-3 rounded bg-theme-tertiary border border-theme-default text-sm text-theme-primary leading-relaxed">
+                        <div key={i} className=\"p-3 rounded bg-theme-tertiary border border-theme-default text-sm text-theme-primary leading-relaxed\">
                           {i + 1}. {step}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="mb-6 p-4 rounded bg-[rgba(52,211,153,0.05)] border border-[rgba(52,211,153,0.2)]">
-                    <div className="text-sm font-semibold text-theme-accent-emerald mb-2">完了基準</div>
-                    <p className="text-sm text-theme-secondary leading-relaxed">
+                  <div className=\"mb-6 p-4 rounded bg-[rgba(52,211,153,0.05)] border border-[rgba(52,211,153,0.2)]\">
+                    <div className=\"text-sm font-semibold text-theme-accent-emerald mb-2\">完了基準</div>
+                    <p className=\"text-sm text-theme-secondary leading-relaxed\">
                       {guide.completion}
                     </p>
                   </div>
@@ -569,9 +594,9 @@ export default function AlchemistCompass() {
 
               <button
                 onClick={startTimer}
-                className="w-full py-4 px-4 rounded-lg bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] transition-all flex items-center justify-center gap-2 font-semibold"
+                className=\"w-full py-4 px-4 rounded-lg glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] transition-all flex items-center justify-center gap-2 font-semibold\"
               >
-                <Play className="w-5 h-5" />
+                <Play className=\"w-5 h-5\" />
                 5分タイマーを開始
               </button>
             </div>
@@ -579,21 +604,21 @@ export default function AlchemistCompass() {
         )}
 
         {mode === 'timer' && selectedTask && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="text-9xl font-bold text-theme-accent-cyan mb-4">
+          <div className=\"space-y-6\">
+            <div className=\"text-center\">
+              <div className=\"text-9xl font-bold text-theme-accent-cyan mb-4\">
                 {formatTime(timeLeft)}
               </div>
-              <div className="text-xl text-theme-primary mb-6">
+              <div className=\"text-xl text-theme-primary mb-6\">
                 {selectedTask.title}
               </div>
 
-              <div className="flex gap-3 justify-center mb-8">
+              <div className=\"flex gap-3 justify-center mb-8\">
                 <button
                   onClick={togglePause}
-                  className="py-3 px-6 rounded-lg bg-theme-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors flex items-center gap-2"
+                  className=\"py-3 px-6 rounded-lg glass-card border border-theme-default hover:border-theme-active text-theme-secondary transition-colors flex items-center gap-2\"
                 >
-                  {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                  {isPaused ? <Play className=\"w-5 h-5\" /> : <Pause className=\"w-5 h-5\" />}
                   {isPaused ? '再開' : '一時停止'}
                 </button>
                 <button
@@ -601,22 +626,22 @@ export default function AlchemistCompass() {
                     setIsRunning(false);
                     setMode('complete');
                   }}
-                  className="py-3 px-6 rounded-lg bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] flex items-center gap-2"
+                  className=\"py-3 px-6 rounded-lg glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] flex items-center gap-2\"
                 >
-                  <Check className="w-5 h-5" />
+                  <Check className=\"w-5 h-5\" />
                   完了
                 </button>
               </div>
             </div>
 
             {/* Chat Interface */}
-            <div className="p-4 rounded-lg bg-theme-card backdrop-blur-xl border border-theme-default">
-              <div className="flex items-center gap-2 mb-3 text-sm text-theme-secondary">
-                <MessageCircle className="w-4 h-4" />
+            <div className=\"p-4 rounded-lg glass-card border border-theme-default\">
+              <div className=\"flex items-center gap-2 mb-3 text-sm text-theme-secondary\">
+                <MessageCircle className=\"w-4 h-4\" />
                 質問・相談
               </div>
               
-              <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+              <div className=\"space-y-2 mb-3 max-h-48 overflow-y-auto\">
                 {chatMessages.map((msg, i) => (
                   <div
                     key={i}
@@ -630,32 +655,32 @@ export default function AlchemistCompass() {
                   </div>
                 ))}
                 {isSendingMessage && (
-                  <div className="p-2 rounded text-sm bg-theme-tertiary text-theme-secondary mr-8 flex items-center gap-2">
-                    <Loader className="w-3 h-3 animate-spin" />
+                  <div className=\"p-2 rounded text-sm bg-theme-tertiary text-theme-secondary mr-8 flex items-center gap-2\">
+                    <Loader className=\"w-3 h-3 animate-spin\" />
                     考え中...
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className=\"flex gap-2\">
                 <input
-                  type="text"
+                  type=\"text\"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && sendMessage()}
-                  placeholder="質問を入力..."
-                  className="flex-1 py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary"
+                  placeholder=\"質問を入力...\"
+                  className=\"flex-1 py-2 px-3 rounded bg-theme-tertiary border border-theme-default outline-none focus:border-theme-active text-sm text-theme-primary\"
                   disabled={isSendingMessage}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={isSendingMessage}
-                  className="py-2 px-4 rounded bg-[rgba(34,211,238,0.1)] border border-[rgba(34,211,238,0.3)] text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.2)] disabled:opacity-50"
+                  className=\"py-2 px-4 rounded glass-card border border-theme-active text-theme-accent-cyan hover:bg-[rgba(34,211,238,0.1)] disabled:opacity-50\"
                 >
                   {isSendingMessage ? (
-                    <Loader className="w-4 h-4 animate-spin" />
+                    <Loader className=\"w-4 h-4 animate-spin\" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                    <Send className=\"w-4 h-4\" />
                   )}
                 </button>
               </div>
@@ -664,31 +689,31 @@ export default function AlchemistCompass() {
         )}
 
         {mode === 'complete' && selectedTask && (
-          <div className="text-center space-y-6">
-            <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold text-theme-primary">お疲れさまでした！</h2>
-            <p className="text-theme-secondary">{selectedTask.title}</p>
+          <div className=\"text-center space-y-6\">
+            <div className=\"text-6xl mb-4\">🎉</div>
+            <h2 className=\"text-2xl font-bold text-theme-primary\">お疲れさまでした！</h2>
+            <p className=\"text-theme-secondary\">{selectedTask.title}</p>
 
-            <div className="flex gap-3 justify-center">
+            <div className=\"flex gap-3 justify-center\">
               <button
                 onClick={() => completeTask('complete')}
-                className="py-3 px-6 rounded-lg bg-[rgba(52,211,153,0.1)] border border-[rgba(52,211,153,0.3)] text-theme-accent-emerald hover:bg-[rgba(52,211,153,0.2)] flex items-center gap-2"
+                className=\"py-3 px-6 rounded-lg glass-card border border-[rgba(52,211,153,0.4)] text-theme-accent-emerald hover:bg-[rgba(52,211,153,0.1)] flex items-center gap-2\"
               >
-                <Check className="w-5 h-5" />
+                <Check className=\"w-5 h-5\" />
                 完了
               </button>
               <button
                 onClick={() => completeTask('defer')}
-                className="py-3 px-6 rounded-lg bg-theme-card border border-theme-default hover:border-theme-hover text-theme-secondary flex items-center gap-2"
+                className=\"py-3 px-6 rounded-lg glass-card border border-theme-default hover:border-theme-hover text-theme-secondary flex items-center gap-2\"
               >
-                <Clock className="w-5 h-5" />
+                <Clock className=\"w-5 h-5\" />
                 保留
               </button>
               <button
                 onClick={() => completeTask('drop')}
-                className="py-3 px-6 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 flex items-center gap-2"
+                className=\"py-3 px-6 rounded-lg glass-card border border-red-500/30 text-red-400 hover:bg-red-500/10 flex items-center gap-2\"
               >
-                <Archive className="w-5 h-5" />
+                <Archive className=\"w-5 h-5\" />
                 削除
               </button>
             </div>
