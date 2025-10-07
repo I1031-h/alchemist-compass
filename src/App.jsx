@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, Clock, Zap, Target, Plus, X, MessageCircle, Send, Play, Pause, Check, Archive, AlertCircle, ChevronRight, Settings, Loader } from 'lucide-react';
-import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse } from './utils/geminiAPI';
+import { Sparkles, Clock, Zap, Target, Plus, X, MessageCircle, Send, Play, Pause, Check, Archive, AlertCircle, ChevronRight, Settings, Loader, Trash2, Palette } from 'lucide-react';
+import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions } from './utils/geminiAPI';
+import { getThemeOptions, applyTheme } from './utils/themes';
 
 export default function AlchemistCompass() {
   const [activeTab, setActiveTab] = useState('want');
@@ -16,24 +17,40 @@ export default function AlchemistCompass() {
   const [chatInput, setChatInput] = useState('');
   const timerRef = useRef(null);
 
-  // AI Integration
+  // Settings
   const [apiKey, setApiKey] = useState('');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.0-flash-exp');
+  const [selectedTheme, setSelectedTheme] = useState('linear');
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Loading states
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [guide, setGuide] = useState(null);
   const [isLoadingGuide, setIsLoadingGuide] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
 
+  const themeOptions = getThemeOptions();
+  const modelOptions = getModelOptions();
+
   // Load from localStorage
   useEffect(() => {
     const savedTasks = localStorage.getItem('alchemist-tasks');
     const savedApiKey = localStorage.getItem('alchemist-api-key');
+    const savedModel = localStorage.getItem('alchemist-model');
+    const savedTheme = localStorage.getItem('alchemist-theme');
     
     if (savedTasks) {
       setTasks(JSON.parse(savedTasks));
     }
     if (savedApiKey) {
       setApiKey(savedApiKey);
+    }
+    if (savedModel) {
+      setSelectedModel(savedModel);
+    }
+    if (savedTheme) {
+      setSelectedTheme(savedTheme);
+      applyTheme(savedTheme);
     }
   }, []);
 
@@ -42,12 +59,21 @@ export default function AlchemistCompass() {
     localStorage.setItem('alchemist-tasks', JSON.stringify(tasks));
   }, [tasks]);
 
-  // Save API key
+  // Save settings
   useEffect(() => {
     if (apiKey) {
       localStorage.setItem('alchemist-api-key', apiKey);
     }
   }, [apiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('alchemist-model', selectedModel);
+  }, [selectedModel]);
+
+  useEffect(() => {
+    localStorage.setItem('alchemist-theme', selectedTheme);
+    applyTheme(selectedTheme);
+  }, [selectedTheme]);
 
   // Timer logic
   useEffect(() => {
@@ -71,6 +97,17 @@ export default function AlchemistCompass() {
     }
   }, [timeLeft, isRunning]);
 
+  // Delete task from list
+  const deleteTask = (e, taskId) => {
+    e.stopPropagation();
+    if (window.confirm('このタスクを削除しますか？')) {
+      setTasks(prev => ({
+        ...prev,
+        [activeTab]: prev[activeTab].filter(t => t.id !== taskId)
+      }));
+    }
+  };
+
   // Add task with AI evaluation
   const addTask = async () => {
     if (!newTaskTitle.trim()) return;
@@ -80,10 +117,8 @@ export default function AlchemistCompass() {
     try {
       let evaluation;
       if (apiKey) {
-        // Use real AI evaluation
-        evaluation = await evaluateTaskAPI(newTaskTitle, activeTab, {}, apiKey);
+        evaluation = await evaluateTaskAPI(newTaskTitle, activeTab, {}, apiKey, selectedModel);
       } else {
-        // Fallback to mock evaluation
         const impact = Math.floor(Math.random() * 4) + 7;
         const ease = Math.floor(Math.random() * 5) + 6;
         evaluation = {
@@ -124,11 +159,10 @@ export default function AlchemistCompass() {
     setChatMessages([]);
     setGuide(null);
     
-    // Generate guide
     if (apiKey) {
       setIsLoadingGuide(true);
       try {
-        const generatedGuide = await generateGuideAPI(task, {}, apiKey);
+        const generatedGuide = await generateGuideAPI(task, {}, apiKey, selectedModel);
         setGuide(generatedGuide);
       } catch (error) {
         console.error('Guide generation failed:', error);
@@ -198,7 +232,8 @@ export default function AlchemistCompass() {
             timeLeft
           },
           chatMessages,
-          apiKey
+          apiKey,
+          selectedModel
         );
         setChatMessages(prev => [...prev, { role: 'assistant', content: response }]);
       } catch (error) {
@@ -262,8 +297,12 @@ export default function AlchemistCompass() {
         {/* Settings Panel */}
         {showSettings && (
           <div className="mb-6 p-4 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800">
-            <h3 className="text-sm font-semibold mb-3">設定</h3>
-            <div className="space-y-3">
+            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              設定
+            </h3>
+            <div className="space-y-4">
+              {/* API Key */}
               <div>
                 <label className="text-xs text-slate-400 block mb-1">Gemini API Key</label>
                 <input
@@ -278,6 +317,46 @@ export default function AlchemistCompass() {
                     API Keyを取得
                   </a>
                 </p>
+              </div>
+
+              {/* Model Selection */}
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">AIモデル</label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                >
+                  {modelOptions.map(model => (
+                    <option key={model.id} value={model.id}>
+                      {model.name} - {model.description}
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-1 flex gap-3 text-xs">
+                  <span className="text-slate-500">速度: {modelOptions.find(m => m.id === selectedModel)?.speed}</span>
+                  <span className="text-slate-500">品質: {modelOptions.find(m => m.id === selectedModel)?.quality}</span>
+                  <span className="text-slate-500">コスト: {modelOptions.find(m => m.id === selectedModel)?.cost}</span>
+                </div>
+              </div>
+
+              {/* Theme Selection */}
+              <div>
+                <label className="text-xs text-slate-400 block mb-1 flex items-center gap-1">
+                  <Palette className="w-3 h-3" />
+                  UIテーマ
+                </label>
+                <select
+                  value={selectedTheme}
+                  onChange={(e) => setSelectedTheme(e.target.value)}
+                  className="w-full py-2 px-3 rounded bg-slate-800/50 border border-slate-700 outline-none focus:border-cyan-500/30 text-sm"
+                >
+                  {themeOptions.map(theme => (
+                    <option key={theme.value} value={theme.value}>
+                      {theme.label} - {theme.description}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -368,13 +447,15 @@ export default function AlchemistCompass() {
             {/* Task List */}
             <div className="space-y-3">
               {currentTasks.map(task => (
-                <button
+                <div
                   key={task.id}
-                  onClick={() => selectTask(task)}
-                  className="w-full p-4 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800 hover:border-cyan-500/30 transition-all text-left group"
+                  className="w-full p-4 rounded-lg bg-slate-900/60 backdrop-blur-xl border border-slate-800 hover:border-cyan-500/30 transition-all group"
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <button
+                      onClick={() => selectTask(task)}
+                      className="flex-1 text-left"
+                    >
                       <div className="font-semibold text-slate-100 mb-2">{task.title}</div>
                       <div className="flex items-center gap-4 text-xs text-slate-500">
                         <div className="flex items-center gap-1">
@@ -393,15 +474,22 @@ export default function AlchemistCompass() {
                       <div className="mt-2 text-xs text-cyan-400/80">
                         {task.reason}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
+                    </button>
+                    <div className="flex items-center gap-3 ml-4">
                       <div className="text-2xl font-bold text-cyan-400">
                         {task.score}
                       </div>
+                      <button
+                        onClick={(e) => deleteTask(e, task.id)}
+                        className="p-2 rounded hover:bg-red-500/10 text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="削除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                       <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-cyan-400 transition-colors" />
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
 
