@@ -1,211 +1,223 @@
 /**
  * Theme System for Alchemist's Compass
- * Supports multiple UI design patterns
+ * Comprehensive design system with multiple themes
  */
 
 export const themes = {
-  // Current Linear/Vercel style
-  linear: {
-    id: 'linear',
-    name: 'Linear',
-    description: 'モダン・洗練系（シアン/バイオレット）',
-    colors: {
-      bg: {
-        primary: '#000000',
-        secondary: '#0f172a',
-        tertiary: '#1e293b',
-        card: 'rgba(15, 23, 42, 0.6)',
-      },
-      border: {
-        default: '#334155',
-        hover: '#475569',
-        active: 'rgba(34, 211, 238, 0.3)',
-      },
-      accent: {
-        cyan: '#22d3ee',
-        blue: '#60a5fa',
-        violet: '#a78bfa',
-        emerald: '#34d399',
-      },
-      text: {
-        primary: '#f1f5f9',
-        secondary: '#94a3b8',
-        tertiary: '#64748b',
-      },
+  // Dashboard Theme - Blue/Cyan
+  dashboard: {
+    id: 'dashboard',
+    name: 'Dashboard',
+    description: 'Modern blue/cyan (default)',
+    bg: {
+      primary: '#000000',
+      secondary: '#111827',
+      tertiary: '#1f2937',
+      input: '#0a0a0a'
     },
-    effects: {
-      gradient: 'linear-gradient(to right, #22d3ee, #a78bfa)',
-      backdropBlur: 'blur(20px)',
-      borderRadius: '0.5rem',
+    border: {
+      default: '#1f2937',
+      hover: '#374151',
+      active: '#3b82f6'
     },
+    text: {
+      primary: '#ffffff',
+      secondary: '#9ca3af',
+      tertiary: '#6b7280'
+    },
+    accent: {
+      primary: '#3b82f6',
+      secondary: '#06b6d4',
+      tertiary: '#8b5cf6'
+    },
+    status: {
+      success: '#22c55e',
+      warning: '#f59e0b',
+      error: '#ef4444'
+    },
+    gradient: {
+      primary: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+      secondary: 'linear-gradient(135deg, #06b6d4, #22c55e)'
+    },
+    shadow: {
+      card: '0 4px 12px rgba(0,0,0,0.5)',
+      cardInverted: '0 -4px 12px rgba(0,0,0,0.5)',
+      button: '0 2px 8px rgba(0,0,0,0.4)',
+      accent: '0 4px 12px rgba(59,130,246,0.5)',
+      accentAlt: '0 4px 12px rgba(6,182,212,0.5)',
+      badge: '0 4px 12px rgba(59,130,246,0.6)',
+      subtle: '0 2px 4px rgba(0,0,0,0.3)'
+    }
   },
 
-  // v0 Generated Design - Orange/Coral
-  v0: {
-    id: 'v0',
-    name: 'v0 Design',
-    description: 'オレンジ/コーラル・グラデーション（v0生成）',
-    colors: {
-      bg: {
-        primary: '#1a2332',
-        secondary: '#243447',
-        tertiary: '#2d3e52',
-        card: 'rgba(26, 35, 50, 0.7)',
-      },
-      border: {
-        default: '#3d4f66',
-        hover: '#4a5d7a',
-        active: 'rgba(255, 107, 74, 0.4)',
-      },
-      accent: {
-        coral: '#ff6b4a',
-        orange: '#ff8a6b',
-        cyan: '#22d3ee',
-        emerald: '#34d399',
-      },
-      text: {
-        primary: '#f1f5f9',
-        secondary: '#94a3b8',
-        tertiary: '#64748b',
-      },
+  // Ember Theme - Dark Gray/Pink/Red
+  ember: {
+    id: 'ember',
+    name: 'Ember',
+    description: 'Dark gray with pink/red accents',
+    bg: {
+      primary: '#0f0f0f',
+      secondary: '#1a1a1a',
+      tertiary: '#262626',
+      input: '#0d0d0d'
     },
-    effects: {
-      gradient: 'linear-gradient(135deg, #ff6b4a, #ff8a6b)',
-      backdropBlur: 'blur(12px)',
-      borderRadius: '0.5rem',
+    border: {
+      default: '#2a2a2a',
+      hover: '#3a3a3a',
+      active: '#ec4899'
     },
+    text: {
+      primary: '#f5f5f5',
+      secondary: '#a3a3a3',
+      tertiary: '#737373'
+    },
+    accent: {
+      primary: '#ec4899',
+      secondary: '#f43f5e',
+      tertiary: '#fb7185'
+    },
+    status: {
+      success: '#22c55e',
+      warning: '#f59e0b',
+      error: '#dc2626'
+    },
+    gradient: {
+      primary: 'linear-gradient(135deg, #ec4899, #f43f5e)',
+      secondary: 'linear-gradient(135deg, #f43f5e, #fb7185)'
+    },
+    shadow: {
+      card: '0 4px 16px rgba(0,0,0,0.6)',
+      cardInverted: '0 -4px 16px rgba(0,0,0,0.6)',
+      button: '0 2px 8px rgba(0,0,0,0.5)',
+      accent: '0 4px 16px rgba(236,72,153,0.4)',
+      accentAlt: '0 4px 16px rgba(244,63,94,0.4)',
+      badge: '0 4px 16px rgba(236,72,153,0.5)',
+      subtle: '0 2px 6px rgba(0,0,0,0.4)'
+    }
   },
 
-  // Image 2 style - Systematic/Professional
-  systematic: {
-    id: 'systematic',
-    name: 'Systematic',
-    description: 'システマティック・開発ツール系',
-    colors: {
-      bg: {
-        primary: '#1a2332',
-        secondary: '#243447',
-        tertiary: '#2d3e52',
-        card: 'rgba(36, 52, 71, 0.8)',
-      },
-      border: {
-        default: '#3d4f66',
-        hover: '#4a5d7a',
-        active: 'rgba(255, 107, 107, 0.4)',
-      },
-      accent: {
-        coral: '#ff6b6b',
-        orange: '#ff8787',
-        blue: '#4dabf7',
-        cyan: '#22d3ee',
-      },
-      text: {
-        primary: '#e9ecef',
-        secondary: '#adb5bd',
-        tertiary: '#868e96',
-      },
+  // Neon Theme - Vibrant Purple/Pink
+  neon: {
+    id: 'neon',
+    name: 'Neon',
+    description: 'Vibrant purple/pink neon',
+    bg: {
+      primary: '#0a0a0f',
+      secondary: '#15151f',
+      tertiary: '#1f1f2a',
+      input: '#0d0d12'
     },
-    effects: {
-      gradient: 'linear-gradient(to right, #ff6b6b, #ff8787)',
-      backdropBlur: 'blur(10px)',
-      borderRadius: '0.375rem',
+    border: {
+      default: '#2a2a3a',
+      hover: '#3a3a4a',
+      active: '#a855f7'
     },
+    text: {
+      primary: '#faf5ff',
+      secondary: '#c4b5fd',
+      tertiary: '#9333ea'
+    },
+    accent: {
+      primary: '#a855f7',
+      secondary: '#d946ef',
+      tertiary: '#ec4899'
+    },
+    status: {
+      success: '#10b981',
+      warning: '#f59e0b',
+      error: '#f43f5e'
+    },
+    gradient: {
+      primary: 'linear-gradient(135deg, #a855f7, #d946ef)',
+      secondary: 'linear-gradient(135deg, #d946ef, #ec4899)'
+    },
+    shadow: {
+      card: '0 4px 20px rgba(168,85,247,0.15)',
+      cardInverted: '0 -4px 20px rgba(168,85,247,0.15)',
+      button: '0 2px 10px rgba(168,85,247,0.2)',
+      accent: '0 4px 20px rgba(168,85,247,0.5)',
+      accentAlt: '0 4px 20px rgba(217,70,239,0.5)',
+      badge: '0 4px 20px rgba(168,85,247,0.6)',
+      subtle: '0 2px 8px rgba(168,85,247,0.2)'
+    }
   },
 
-  // Image 3 style - Minimal/Clean
-  minimal: {
-    id: 'minimal',
-    name: 'Minimal',
-    description: 'ミニマル・機能重視',
-    colors: {
-      bg: {
-        primary: '#2c3e50',
-        secondary: '#34495e',
-        tertiary: '#3d556b',
-        card: 'rgba(52, 73, 94, 0.9)',
-      },
-      border: {
-        default: '#4a6278',
-        hover: '#5a7290',
-        active: 'rgba(0, 217, 255, 0.4)',
-      },
-      accent: {
-        cyan: '#00d9ff',
-        white: '#ffffff',
-        blue: '#5dade2',
-        green: '#48c9b0',
-      },
-      text: {
-        primary: '#ecf0f1',
-        secondary: '#bdc3c7',
-        tertiary: '#95a5a6',
-      },
+  // Forest Theme - Green/Emerald
+  forest: {
+    id: 'forest',
+    name: 'Forest',
+    description: 'Calm green/emerald',
+    bg: {
+      primary: '#0a0f0a',
+      secondary: '#0f1a0f',
+      tertiary: '#1a261a',
+      input: '#0d120d'
     },
-    effects: {
-      gradient: 'linear-gradient(to right, #00d9ff, #5dade2)',
-      backdropBlur: 'blur(5px)',
-      borderRadius: '0.25rem',
+    border: {
+      default: '#1a2a1a',
+      hover: '#2a3a2a',
+      active: '#10b981'
     },
-  },
+    text: {
+      primary: '#f0fdf4',
+      secondary: '#86efac',
+      tertiary: '#4ade80'
+    },
+    accent: {
+      primary: '#10b981',
+      secondary: '#22c55e',
+      tertiary: '#34d399'
+    },
+    status: {
+      success: '#22c55e',
+      warning: '#f59e0b',
+      error: '#ef4444'
+    },
+    gradient: {
+      primary: 'linear-gradient(135deg, #10b981, #22c55e)',
+      secondary: 'linear-gradient(135deg, #22c55e, #34d399)'
+    },
+    shadow: {
+      card: '0 4px 16px rgba(16,185,129,0.1)',
+      cardInverted: '0 -4px 16px rgba(16,185,129,0.1)',
+      button: '0 2px 8px rgba(16,185,129,0.15)',
+      accent: '0 4px 16px rgba(16,185,129,0.4)',
+      accentAlt: '0 4px 16px rgba(34,197,94,0.4)',
+      badge: '0 4px 16px rgba(16,185,129,0.5)',
+      subtle: '0 2px 6px rgba(16,185,129,0.15)'
+    }
+  }
 };
 
 /**
- * Get theme by ID
- */
-export function getTheme(themeId) {
-  return themes[themeId] || themes.linear;
-}
-
-/**
- * Get all theme options for selector
- */
-export function getThemeOptions() {
-  return Object.values(themes).map(theme => ({
-    value: theme.id,
-    label: theme.name,
-    description: theme.description,
-  }));
-}
-
-/**
- * Apply theme to CSS variables
+ * Apply theme to the application
  */
 export function applyTheme(themeId) {
-  const theme = getTheme(themeId);
+  const theme = themes[themeId] || themes.dashboard;
   const root = document.documentElement;
 
-  // Background colors
-  root.style.setProperty('--bg-primary', theme.colors.bg.primary);
-  root.style.setProperty('--bg-secondary', theme.colors.bg.secondary);
-  root.style.setProperty('--bg-tertiary', theme.colors.bg.tertiary);
-  root.style.setProperty('--bg-card', theme.colors.bg.card);
-
-  // Border colors
-  root.style.setProperty('--border-default', theme.colors.border.default);
-  root.style.setProperty('--border-hover', theme.colors.border.hover);
-  root.style.setProperty('--border-active', theme.colors.border.active);
-
-  // Accent colors
-  const accentKeys = Object.keys(theme.colors.accent);
-  accentKeys.forEach(key => {
-    root.style.setProperty(`--accent-${key}`, theme.colors.accent[key]);
+  // Apply CSS custom properties
+  Object.entries(theme.bg).forEach(([key, value]) => {
+    root.style.setProperty(`--bg-${key}`, value);
   });
 
-  // Text colors
-  root.style.setProperty('--text-primary', theme.colors.text.primary);
-  root.style.setProperty('--text-secondary', theme.colors.text.secondary);
-  root.style.setProperty('--text-tertiary', theme.colors.text.tertiary);
+  Object.entries(theme.border).forEach(([key, value]) => {
+    root.style.setProperty(`--border-${key}`, value);
+  });
 
-  // Effects
-  root.style.setProperty('--gradient', theme.effects.gradient);
-  root.style.setProperty('--backdrop-blur', theme.effects.backdropBlur);
-  root.style.setProperty('--border-radius', theme.effects.borderRadius);
-  
-  // Add/remove grid background class based on theme
-  const body = document.body;
-  if (themeId === 'v0' || themeId === 'systematic') {
-    body.classList.add('grid-background');
-  } else {
-    body.classList.remove('grid-background');
-  }
+  Object.entries(theme.text).forEach(([key, value]) => {
+    root.style.setProperty(`--text-${key}`, value);
+  });
+
+  Object.entries(theme.accent).forEach(([key, value]) => {
+    root.style.setProperty(`--accent-${key}`, value);
+  });
+
+  // Set body background
+  document.body.style.backgroundColor = theme.bg.primary;
+  document.body.style.color = theme.text.primary;
+
+  return theme;
 }
+
+export default themes;
