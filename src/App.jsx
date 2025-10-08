@@ -168,7 +168,7 @@ export default function AlchemistCompass() {
 
   const deleteTask = (e, taskId) => {
     e.stopPropagation();
-    if (window.confirm('このタスクを削除しますか？')) {
+    if (window.confirm('このタスクを削除しますか?')) {
       setTasks(prev => ({
         ...prev,
         [activeTab]: prev[activeTab].filter(t => t.id !== taskId)
@@ -427,7 +427,7 @@ export default function AlchemistCompass() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6">
-        {/* HOME PAGE */}
+        {/* HOME PAGE - LIST MODE */}
         {currentPage === 'home' && mode === 'list' && (
           <>
             {/* Tab Navigation */}
@@ -699,8 +699,284 @@ export default function AlchemistCompass() {
           </>
         )}
 
-        {/* GUIDE, TIMER, COMPLETE PAGES - Similar styling updates */}
-        {/* (Implementation continues with same theming pattern) */}
+        {/* HOME PAGE - GUIDE MODE */}
+        {currentPage === 'home' && mode === 'guide' && selectedTask && (
+          <div className="space-y-6">
+            <button
+              onClick={() => setMode('list')}
+              className="text-sm flex items-center gap-1 transition-colors"
+              style={{ color: currentTheme.text.secondary }}
+              onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
+              onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
+            >
+              ← BACK TO LIST
+            </button>
+
+            <div 
+              className="rounded-xl p-6"
+              style={{
+                backgroundColor: currentTheme.bg.secondary,
+                border: `1px solid ${currentTheme.border.default}`,
+                boxShadow: currentTheme.shadow.card
+              }}
+            >
+              <h2 className="text-xl font-bold mb-4" style={{ color: currentTheme.text.primary }}>{selectedTask.title}</h2>
+              
+              {isLoadingGuide ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="w-8 h-8 animate-spin" style={{ color: currentTheme.accent.primary }} />
+                </div>
+              ) : guide && (
+                <>
+                  <div 
+                    className="mb-6 p-4 rounded-lg"
+                    style={{
+                      backgroundColor: `${currentTheme.accent.primary}10`,
+                      border: `1px solid ${currentTheme.accent.primary}30`
+                    }}
+                  >
+                    <div className="text-xs font-bold mb-2" style={{ color: currentTheme.accent.primary }}>YOUR APPROACH</div>
+                    <p className="text-sm leading-relaxed" style={{ color: currentTheme.text.secondary }}>
+                      {guide.approach}
+                    </p>
+                  </div>
+
+                  <div className="mb-6">
+                    <div className="text-xs font-bold mb-3" style={{ color: currentTheme.text.secondary }}>RECOMMENDED STEPS</div>
+                    <div className="space-y-2">
+                      {guide.steps.map((step, i) => (
+                        <div 
+                          key={i} 
+                          className="p-3 rounded-lg text-sm leading-relaxed"
+                          style={{
+                            backgroundColor: currentTheme.bg.input,
+                            border: `1px solid ${currentTheme.border.default}`,
+                            color: currentTheme.text.primary
+                          }}
+                        >
+                          {i + 1}. {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div 
+                    className="mb-6 p-4 rounded-lg"
+                    style={{
+                      backgroundColor: `${currentTheme.status.success}10`,
+                      border: `1px solid ${currentTheme.status.success}30`
+                    }}
+                  >
+                    <div className="text-xs font-bold mb-2" style={{ color: currentTheme.status.success }}>COMPLETION CRITERIA</div>
+                    <p className="text-sm leading-relaxed" style={{ color: currentTheme.text.secondary }}>
+                      {guide.completion}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <button
+                onClick={startTimer}
+                className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
+                style={{
+                  background: currentTheme.gradient.primary,
+                  color: '#ffffff',
+                  boxShadow: currentTheme.shadow.accent
+                }}
+              >
+                <Play className="w-5 h-5" />
+                START 5-MIN TIMER
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* HOME PAGE - TIMER MODE */}
+        {currentPage === 'home' && mode === 'timer' && selectedTask && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div 
+                className="text-9xl font-bold mb-4" 
+                style={{ 
+                  color: currentTheme.accent.primary,
+                  textShadow: `0 4px 24px ${currentTheme.accent.primary}50`
+                }}
+              >
+                {formatTime(timeLeft)}
+              </div>
+              <div className="text-xl mb-6" style={{ color: currentTheme.text.primary }}>
+                {selectedTask.title}
+              </div>
+
+              <div className="flex gap-3 justify-center mb-8">
+                <button
+                  onClick={togglePause}
+                  className="py-3 px-6 rounded-xl transition-all flex items-center gap-2"
+                  style={{
+                    backgroundColor: currentTheme.bg.secondary,
+                    border: `1px solid ${currentTheme.border.default}`,
+                    color: currentTheme.text.secondary,
+                    boxShadow: currentTheme.shadow.button
+                  }}
+                >
+                  {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                  {isPaused ? 'RESUME' : 'PAUSE'}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsRunning(false);
+                    setMode('complete');
+                  }}
+                  className="py-3 px-6 rounded-xl transition-all flex items-center gap-2"
+                  style={{
+                    background: currentTheme.gradient.primary,
+                    color: '#ffffff',
+                    boxShadow: currentTheme.shadow.accent
+                  }}
+                >
+                  <Check className="w-5 h-5" />
+                  COMPLETE
+                </button>
+              </div>
+            </div>
+
+            {/* Chat Interface */}
+            <div 
+              className="rounded-xl p-4"
+              style={{
+                backgroundColor: currentTheme.bg.secondary,
+                border: `1px solid ${currentTheme.border.default}`,
+                boxShadow: currentTheme.shadow.card
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: currentTheme.text.secondary }}>
+                <MessageCircle className="w-4 h-4" />
+                ASK AI COACH
+              </div>
+              
+              <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                {chatMessages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className="p-2 rounded-lg text-sm leading-relaxed"
+                    style={msg.role === 'user' ? {
+                      backgroundColor: `${currentTheme.accent.primary}20`,
+                      color: currentTheme.accent.primary,
+                      border: `1px solid ${currentTheme.accent.primary}30`,
+                      marginLeft: '2rem'
+                    } : {
+                      backgroundColor: currentTheme.bg.input,
+                      color: currentTheme.text.secondary,
+                      border: `1px solid ${currentTheme.border.default}`,
+                      marginRight: '2rem'
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                ))}
+                {isSendingMessage && (
+                  <div 
+                    className="p-2 rounded-lg text-sm flex items-center gap-2"
+                    style={{
+                      backgroundColor: currentTheme.bg.input,
+                      color: currentTheme.text.secondary,
+                      border: `1px solid ${currentTheme.border.default}`,
+                      marginRight: '2rem'
+                    }}
+                  >
+                    <Loader className="w-3 h-3 animate-spin" />
+                    Thinking...
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && sendMessage()}
+                  placeholder="Type your question..."
+                  className="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+                  style={{
+                    backgroundColor: currentTheme.bg.input,
+                    border: `1px solid ${currentTheme.border.default}`,
+                    color: currentTheme.text.primary
+                  }}
+                  disabled={isSendingMessage}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={isSendingMessage}
+                  className="py-2 px-4 rounded-lg disabled:opacity-50"
+                  style={{
+                    backgroundColor: `${currentTheme.accent.primary}20`,
+                    border: `1px solid ${currentTheme.accent.primary}50`,
+                    color: currentTheme.accent.primary,
+                    boxShadow: `0 2px 6px ${currentTheme.accent.primary}30`
+                  }}
+                >
+                  {isSendingMessage ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HOME PAGE - COMPLETE MODE */}
+        {currentPage === 'home' && mode === 'complete' && selectedTask && (
+          <div className="text-center space-y-6">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold" style={{ color: currentTheme.text.primary }}>TASK COMPLETED!</h2>
+            <p style={{ color: currentTheme.text.secondary }}>{selectedTask.title}</p>
+
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => completeTask('complete')}
+                className="py-3 px-6 rounded-xl flex items-center gap-2"
+                style={{
+                  backgroundColor: `${currentTheme.status.success}20`,
+                  border: `1px solid ${currentTheme.status.success}50`,
+                  color: currentTheme.status.success,
+                  boxShadow: `0 2px 8px ${currentTheme.status.success}30`
+                }}
+              >
+                <Check className="w-5 h-5" />
+                DONE
+              </button>
+              <button
+                onClick={() => completeTask('defer')}
+                className="py-3 px-6 rounded-xl flex items-center gap-2"
+                style={{
+                  backgroundColor: currentTheme.bg.secondary,
+                  border: `1px solid ${currentTheme.border.default}`,
+                  color: currentTheme.text.secondary,
+                  boxShadow: currentTheme.shadow.subtle
+                }}
+              >
+                <Clock className="w-5 h-5" />
+                DEFER
+              </button>
+              <button
+                onClick={() => completeTask('drop')}
+                className="py-3 px-6 rounded-xl flex items-center gap-2"
+                style={{
+                  backgroundColor: `${currentTheme.status.error}20`,
+                  border: `1px solid ${currentTheme.status.error}50`,
+                  color: currentTheme.status.error,
+                  boxShadow: `0 2px 6px ${currentTheme.status.error}30`
+                }}
+              >
+                <Archive className="w-5 h-5" />
+                DROP
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ANALYTICS PAGE */}
         {currentPage === 'analytics' && (
@@ -764,7 +1040,8 @@ export default function AlchemistCompass() {
           </div>
         )}
 
-        {/* SETTINGS PAGE */}
+        {/* SETTINGS PAGE - Full implementation from previous code */}
+        {/* (Keeping existing settings implementation) */}
         {currentPage === 'settings' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold mb-6">SETTINGS</h2>
@@ -1046,11 +1323,11 @@ export default function AlchemistCompass() {
             >
               <div className="flex items-center justify-between text-xs" style={{ color: currentTheme.text.tertiary }}>
                 <span>VERSION</span>
-                <span className="font-mono">1.1.0</span>
+                <span className="font-mono">1.1.1</span>
               </div>
               <div className="flex items-center justify-between text-xs mt-2" style={{ color: currentTheme.text.tertiary }}>
                 <span>BUILD</span>
-                <span className="font-mono">2025.10.07</span>
+                <span className="font-mono">2025.10.08</span>
               </div>
             </div>
           </div>
