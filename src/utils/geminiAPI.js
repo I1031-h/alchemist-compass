@@ -248,6 +248,98 @@ ${category === 'want' ? 'やりたいこと（内発的動機）' : 'やるべ�
 }
 
 /**
+ * Bulk evaluate multiple tasks with AI
+ * @param {string} tasksText - Multi-line text with one task per line
+ * @param {object} userContext - User profile data
+ * @param {string} apiKey - Gemini API key
+ * @param {string} model - Model ID
+ * @returns {Promise<array>} - Array of evaluated tasks
+ */
+export async function bulkEvaluateTasks(tasksText, userContext = {}, apiKey, model = 'gemini-2.5-flash') {
+  const lines = tasksText.split('\n').filter(line => line.trim()).slice(0, 20); // Max 20 tasks
+  
+  if (lines.length === 0) {
+    throw new Error('No tasks to evaluate');
+  }
+
+  const tasksFormatted = lines.map((line, i) => `${i + 1}. ${line.trim()}`).join('\n');
+
+  const prompt = `あなたはパーソナルAIコーチです。以下のタスクリストを一括評価してください。
+
+【タスクリスト】
+${tasksFormatted}
+
+【ユーザープロファイル】
+- 22歳、独立したクリエイター・システムビルダー
+- 完璧主義傾向あり（MVP思考を推奨）
+- システム構築・自動化・効率化が得意
+- 効率性と洗練性を重視
+- 自律性とコントロール感を重視
+
+【評価タスク】
+各タスクについて：
+1. **Category**: "want"（やりたいこと・内発的動機）または "should"（やるべきこと・外発的動機）
+2. **Impact**: 7-10の整数（目標達成への貢献度）
+3. **Ease**: 6-10の整数（始めやすさ）
+4. **EstimatedMinutes**: 15, 30, 45, 60のいずれか
+5. **Reason**: 推奨理由（30-50文字）
+
+【判定基準】
+- **Want**: 好奇心・創造性・学習・自己成長が主目的
+- **Should**: 責任・義務・メンテナンス・他者の期待が主目的
+
+【出力形式】
+以下のJSON配列形式**のみ**で回答してください。
+
+[
+  {
+    "title": "タスク1のタイトル",
+    "category": "want" or "should",
+    "impact": 7-10の整数,
+    "ease": 6-10の整数,
+    "estimatedMinutes": 15 or 30 or 45 or 60,
+    "reason": "推奨理由（30-50文字）"
+  },
+  ...
+]
+`;
+
+  try {
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.7, 4000);
+    
+    // Extract JSON array from response
+    const jsonMatch = text.match(/\[[\s\S]*?\]/);
+    if (!jsonMatch) {
+      throw new Error('No JSON array found in response');
+    }
+    
+    const tasks = JSON.parse(jsonMatch[0]);
+    
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error('Invalid task array');
+    }
+    
+    // Validate and clean tasks
+    return tasks.map(task => ({
+      title: task.title?.slice(0, 200) || 'Untitled Task',
+      category: task.category === 'should' ? 'should' : 'want',
+      impact: Math.max(7, Math.min(10, task.impact || 7)),
+      ease: Math.max(6, Math.min(10, task.ease || 7)),
+      estimatedMinutes: [15, 30, 45, 60].includes(task.estimatedMinutes) 
+        ? task.estimatedMinutes 
+        : 30,
+      reason: task.reason?.slice(0, 100) || 'AI評価完了',
+      score: (task.impact || 7) * (task.ease || 7),
+      preActionNote: '',
+      postActionNote: ''
+    }));
+  } catch (error) {
+    console.error('Bulk task evaluation failed:', error);
+    throw new Error(`一括評価に失敗しました: ${error.message}`);
+  }
+}
+
+/**
  * Generate execution guide for task
  * @param {object} task - Task object
  * @param {object} userContext - User profile data
