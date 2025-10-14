@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User, BookOpen, StickyNote, List } from 'lucide-react';
+import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User, BookOpen, StickyNote, List, Edit, X } from 'lucide-react';
 import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions, bulkEvaluateTasks } from './utils/geminiAPI';
 import { themes, applyTheme } from './utils/themes';
 
@@ -23,8 +23,11 @@ export default function AlchemistCompass() {
   const [preActionNote, setPreActionNote] = useState('');
   const [postActionNote, setPostActionNote] = useState('');
   const [startTime, setStartTime] = useState(null);
+  const [editingLogIndex, setEditingLogIndex] = useState(null);
+  const [editingLogData, setEditingLogData] = useState(null);
   const timerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const chatEndRef = useRef(null);
 
   // Settings
   const [apiKey, setApiKey] = useState('');
@@ -52,6 +55,11 @@ export default function AlchemistCompass() {
   const modelOptions = getModelOptions();
   const themeOptions = Object.values(themes);
   const durationOptions = [5, 10, 15, 25, 30];
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   // Load from localStorage
   useEffect(() => {
@@ -191,6 +199,39 @@ export default function AlchemistCompass() {
     }
   };
 
+  const bulkDeleteTasks = () => {
+    if (window.confirm(`${activeTab.toUpperCase()}ボードの全てのタスク (${tasks[activeTab].length}件) を削除しますか?`)) {
+      setTasks(prev => ({
+        ...prev,
+        [activeTab]: []
+      }));
+    }
+  };
+
+  const deleteLog = (index) => {
+    if (window.confirm('このログを削除しますか?')) {
+      setActionLogs(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const startEditingLog = (index) => {
+    setEditingLogIndex(index);
+    setEditingLogData({ ...actionLogs[index] });
+  };
+
+  const saveEditedLog = () => {
+    if (editingLogIndex !== null && editingLogData) {
+      setActionLogs(prev => prev.map((log, i) => i === editingLogIndex ? editingLogData : log));
+      setEditingLogIndex(null);
+      setEditingLogData(null);
+    }
+  };
+
+  const cancelEditingLog = () => {
+    setEditingLogIndex(null);
+    setEditingLogData(null);
+  };
+
   const addTask = async () => {
     if (!newTaskTitle.trim()) return;
     
@@ -264,14 +305,13 @@ export default function AlchemistCompass() {
       if (apiKey) {
         newTasks = await bulkEvaluateTasks(bulkTaskText, personalContext, apiKey, selectedModel);
       } else {
-        // Fallback: Split by newlines and create mock tasks
         const lines = bulkTaskText.split('\n').filter(line => line.trim());
         newTasks = lines.map(line => {
           const impact = Math.floor(Math.random() * 4) + 7;
           const ease = Math.floor(Math.random() * 5) + 6;
           return {
             title: line.trim(),
-            category: 'want', // Default
+            category: 'want',
             impact,
             ease,
             estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
@@ -283,14 +323,12 @@ export default function AlchemistCompass() {
         });
       }
 
-      // Add IDs and timestamps
       const tasksWithMeta = newTasks.map((task, index) => ({
         ...task,
         id: Date.now() + index,
         createdAt: new Date().toISOString()
       }));
 
-      // Merge into existing tasks
       setTasks(prev => {
         const updated = { ...prev };
         tasksWithMeta.forEach(task => {
@@ -435,6 +473,7 @@ export default function AlchemistCompass() {
           {
             title: selectedTask.title,
             timeLeft,
+            guide,
             ...personalContext
           },
           chatMessages,
@@ -548,7 +587,7 @@ export default function AlchemistCompass() {
         {/* HOME PAGE - LIST MODE */}
         {currentPage === 'home' && mode === 'list' && (
           <>
-            {/* Tab Navigation */}
+            {/* Tab Navigation with Bulk Delete */}
             <div className="flex gap-2 mb-6">
               <button
                 onClick={() => setActiveTab('want')}
@@ -588,6 +627,20 @@ export default function AlchemistCompass() {
                   SHOULD ({tasks.should.length})
                 </div>
               </button>
+              {currentTasks.length > 0 && (
+                <button
+                  onClick={bulkDeleteTasks}
+                  className="py-3 px-4 rounded-xl transition-all"
+                  style={{
+                    backgroundColor: `${currentTheme.status.error}20`,
+                    border: `1px solid ${currentTheme.status.error}50`,
+                    color: currentTheme.status.error,
+                    boxShadow: `0 2px 6px ${currentTheme.status.error}30`
+                  }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Add Task Buttons */}
@@ -778,7 +831,6 @@ export default function AlchemistCompass() {
                     e.currentTarget.style.borderColor = currentTheme.border.default;
                   }}
                 >
-                  {/* Score Badge */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <h3 className="font-bold mb-1" style={{ color: currentTheme.text.primary }}>{task.title}</h3>
@@ -796,7 +848,6 @@ export default function AlchemistCompass() {
                     </div>
                   </div>
 
-                  {/* Metrics */}
                   <div className="space-y-3 mb-4">
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -854,7 +905,6 @@ export default function AlchemistCompass() {
                     </div>
                   )}
 
-                  {/* Actions */}
                   <div className="flex gap-2">
                     <button 
                       onClick={(e) => {
@@ -999,6 +1049,92 @@ export default function AlchemistCompass() {
                       {guide.completion}
                     </p>
                   </div>
+
+                  {/* Chat Interface in Guide Mode */}
+                  <div 
+                    className="mb-6 rounded-xl p-4"
+                    style={{
+                      backgroundColor: currentTheme.bg.tertiary,
+                      border: `1px solid ${currentTheme.border.default}`,
+                      boxShadow: currentTheme.shadow.subtle
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: currentTheme.text.secondary }}>
+                      <MessageCircle className="w-4 h-4" />
+                      FEEDBACK & QUESTIONS
+                    </div>
+                    
+                    <div className="space-y-2 mb-3 max-h-64 overflow-y-auto">
+                      {chatMessages.map((msg, i) => (
+                        <div
+                          key={i}
+                          className="p-2 rounded-lg text-sm leading-relaxed"
+                          style={msg.role === 'user' ? {
+                            backgroundColor: `${currentTheme.accent.primary}20`,
+                            color: currentTheme.accent.primary,
+                            border: `1px solid ${currentTheme.accent.primary}30`,
+                            marginLeft: '2rem'
+                          } : {
+                            backgroundColor: currentTheme.bg.input,
+                            color: currentTheme.text.secondary,
+                            border: `1px solid ${currentTheme.border.default}`,
+                            marginRight: '2rem'
+                          }}
+                        >
+                          {msg.content}
+                        </div>
+                      ))}
+                      {isSendingMessage && (
+                        <div 
+                          className="p-2 rounded-lg text-sm flex items-center gap-2"
+                          style={{
+                            backgroundColor: currentTheme.bg.input,
+                            color: currentTheme.text.secondary,
+                            border: `1px solid ${currentTheme.border.default}`,
+                            marginRight: '2rem'
+                          }}
+                        >
+                          <Loader className="w-3 h-3 animate-spin" />
+                          Thinking...
+                        </div>
+                      )}
+                      <div ref={chatEndRef} />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && sendMessage()}
+                        placeholder="このアプローチについて質問やフィードバックを..."
+                        className="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+                        style={{
+                          backgroundColor: currentTheme.bg.input,
+                          border: `1px solid ${currentTheme.border.default}`,
+                          color: currentTheme.text.primary
+                        }}
+                        disabled={isSendingMessage}
+                      />
+                      <button
+                        onClick={sendMessage}
+                        disabled={isSendingMessage}
+                        className="py-2 px-4 rounded-lg disabled:opacity-50"
+                        style={{
+                          backgroundColor: `${currentTheme.accent.primary}20`,
+                          border: `1px solid ${currentTheme.accent.primary}50`,
+                          color: currentTheme.accent.primary,
+                          boxShadow: `0 2px 6px ${currentTheme.accent.primary}30`
+                        }}
+                      >
+                        {isSendingMessage ? (
+                          <Loader className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -1043,7 +1179,7 @@ export default function AlchemistCompass() {
           </div>
         )}
 
-        {/* HOME PAGE - TIMER MODE */}
+{/* HOME PAGE - TIMER MODE */}
         {currentPage === 'home' && mode === 'timer' && selectedTask && (
           <div className="space-y-6">
             <div className="text-center">
@@ -1140,6 +1276,7 @@ export default function AlchemistCompass() {
                     Thinking...
                   </div>
                 )}
+                <div ref={chatEndRef} />
               </div>
 
               <div className="flex gap-2">
@@ -1258,7 +1395,7 @@ export default function AlchemistCompass() {
           </div>
         )}
 
-        {/* ACTION LOG PAGE */}
+{/* ACTION LOG PAGE with Edit/Delete */}
         {currentPage === 'logs' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1286,103 +1423,203 @@ export default function AlchemistCompass() {
                       boxShadow: currentTheme.shadow.card
                     }}
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-2" style={{ color: currentTheme.text.primary }}>
-                          {log.title}
-                        </h3>
-                        <div className="flex items-center gap-3 text-xs" style={{ color: currentTheme.text.tertiary }}>
-                          <span>{formatDate(log.completedAt)}</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {log.actualDuration}分
-                          </span>
-                          <span>•</span>
-                          <span className={log.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
-                            {log.category.toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                      <div 
-                        className="px-3 py-1 rounded text-xs"
-                        style={{
-                          backgroundColor: `${currentTheme.status.success}20`,
-                          border: `1px solid ${currentTheme.status.success}50`,
-                          color: currentTheme.status.success
-                        }}
-                      >
-                        COMPLETED
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs" style={{ color: currentTheme.text.secondary }}>IMPACT</span>
-                          <span className="text-xs" style={{ color: currentTheme.text.primary }}>{log.impact}/10</span>
-                        </div>
-                        <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
-                          <div
-                            className="h-full"
-                            style={{ 
-                              width: `${(log.impact / 10) * 100}%`,
-                              background: currentTheme.gradient.primary
+                    {editingLogIndex === index ? (
+                      /* Editing Mode */
+                      <div className="space-y-4">
+                        <input
+                          type="text"
+                          value={editingLogData.title}
+                          onChange={(e) => setEditingLogData({...editingLogData, title: e.target.value})}
+                          className="w-full rounded-lg px-3 py-2 text-lg font-bold outline-none"
+                          style={{
+                            backgroundColor: currentTheme.bg.input,
+                            border: `1px solid ${currentTheme.border.default}`,
+                            color: currentTheme.text.primary
+                          }}
+                        />
+                        
+                        <div>
+                          <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>行動前メモ</label>
+                          <textarea
+                            value={editingLogData.preActionNote || ''}
+                            onChange={(e) => setEditingLogData({...editingLogData, preActionNote: e.target.value})}
+                            rows={2}
+                            className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
+                            style={{
+                              backgroundColor: currentTheme.bg.input,
+                              border: `1px solid ${currentTheme.border.default}`,
+                              color: currentTheme.text.primary
                             }}
                           />
                         </div>
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs" style={{ color: currentTheme.text.secondary }}>EASE</span>
-                          <span className="text-xs" style={{ color: currentTheme.text.primary }}>{log.ease}/10</span>
-                        </div>
-                        <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
-                          <div
-                            className="h-full"
-                            style={{ 
-                              width: `${(log.ease / 10) * 100}%`,
-                              background: currentTheme.gradient.secondary
+
+                        <div>
+                          <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>学びと気づき</label>
+                          <textarea
+                            value={editingLogData.postActionNote || ''}
+                            onChange={(e) => setEditingLogData({...editingLogData, postActionNote: e.target.value})}
+                            rows={3}
+                            className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
+                            style={{
+                              backgroundColor: currentTheme.bg.input,
+                              border: `1px solid ${currentTheme.border.default}`,
+                              color: currentTheme.text.primary
                             }}
                           />
                         </div>
-                      </div>
-                    </div>
 
-                    {log.preActionNote && (
-                      <div 
-                        className="mb-3 p-3 rounded-lg"
-                        style={{
-                          backgroundColor: `${currentTheme.status.warning}10`,
-                          border: `1px solid ${currentTheme.status.warning}30`
-                        }}
-                      >
-                        <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.warning }}>
-                          <StickyNote className="w-3 h-3" />
-                          行動前メモ
+                        <div className="flex gap-2">
+                          <button
+                            onClick={saveEditedLog}
+                            className="flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+                            style={{
+                              background: currentTheme.gradient.primary,
+                              color: '#ffffff',
+                              boxShadow: currentTheme.shadow.accent
+                            }}
+                          >
+                            <Check className="w-4 h-4" />
+                            SAVE
+                          </button>
+                          <button
+                            onClick={cancelEditingLog}
+                            className="py-2 px-4 rounded-lg"
+                            style={{
+                              backgroundColor: currentTheme.bg.tertiary,
+                              color: currentTheme.text.secondary,
+                              boxShadow: currentTheme.shadow.subtle
+                            }}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
-                        <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
-                          {log.preActionNote}
-                        </p>
                       </div>
-                    )}
+                    ) : (
+                      /* Display Mode */
+                      <>
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg mb-2" style={{ color: currentTheme.text.primary }}>
+                              {log.title}
+                            </h3>
+                            <div className="flex items-center gap-3 text-xs" style={{ color: currentTheme.text.tertiary }}>
+                              <span>{formatDate(log.completedAt)}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {log.actualDuration}分
+                              </span>
+                              <span>•</span>
+                              <span className={log.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
+                                {log.category.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="px-3 py-1 rounded text-xs"
+                              style={{
+                                backgroundColor: `${currentTheme.status.success}20`,
+                                border: `1px solid ${currentTheme.status.success}50`,
+                                color: currentTheme.status.success
+                              }}
+                            >
+                              COMPLETED
+                            </div>
+                            <button
+                              onClick={() => startEditingLog(index)}
+                              className="p-2 rounded-lg"
+                              style={{
+                                backgroundColor: `${currentTheme.accent.primary}20`,
+                                border: `1px solid ${currentTheme.accent.primary}50`,
+                                color: currentTheme.accent.primary
+                              }}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => deleteLog(index)}
+                              className="p-2 rounded-lg"
+                              style={{
+                                backgroundColor: `${currentTheme.status.error}20`,
+                                border: `1px solid ${currentTheme.status.error}50`,
+                                color: currentTheme.status.error
+                              }}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
 
-                    {log.postActionNote && (
-                      <div 
-                        className="p-3 rounded-lg"
-                        style={{
-                          backgroundColor: `${currentTheme.status.success}10`,
-                          border: `1px solid ${currentTheme.status.success}30`
-                        }}
-                      >
-                        <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.success }}>
-                          <StickyNote className="w-3 h-3" />
-                          学びと気づき
+                        <div className="grid md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs" style={{ color: currentTheme.text.secondary }}>IMPACT</span>
+                              <span className="text-xs" style={{ color: currentTheme.text.primary }}>{log.impact}/10</span>
+                            </div>
+                            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
+                              <div
+                                className="h-full"
+                                style={{ 
+                                  width: `${(log.impact / 10) * 100}%`,
+                                  background: currentTheme.gradient.primary
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs" style={{ color: currentTheme.text.secondary }}>EASE</span>
+                              <span className="text-xs" style={{ color: currentTheme.text.primary }}>{log.ease}/10</span>
+                            </div>
+                            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
+                              <div
+                                className="h-full"
+                                style={{ 
+                                  width: `${(log.ease / 10) * 100}%`,
+                                  background: currentTheme.gradient.secondary
+                                }}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
-                          {log.postActionNote}
-                        </p>
-                      </div>
+
+                        {log.preActionNote && (
+                          <div 
+                            className="mb-3 p-3 rounded-lg"
+                            style={{
+                              backgroundColor: `${currentTheme.status.warning}10`,
+                              border: `1px solid ${currentTheme.status.warning}30`
+                            }}
+                          >
+                            <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.warning }}>
+                              <StickyNote className="w-3 h-3" />
+                              行動前メモ
+                            </div>
+                            <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
+                              {log.preActionNote}
+                            </p>
+                          </div>
+                        )}
+
+                        {log.postActionNote && (
+                          <div 
+                            className="p-3 rounded-lg"
+                            style={{
+                              backgroundColor: `${currentTheme.status.success}10`,
+                              border: `1px solid ${currentTheme.status.success}30`
+                            }}
+                          >
+                            <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.success }}>
+                              <StickyNote className="w-3 h-3" />
+                              学びと気づき
+                            </div>
+                            <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
+                              {log.postActionNote}
+                            </p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
@@ -1448,7 +1685,7 @@ export default function AlchemistCompass() {
           </div>
         )}
 
-        {/* SETTINGS PAGE */}
+{/* SETTINGS PAGE - keeping existing implementation */}
         {currentPage === 'settings' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold mb-6">SETTINGS</h2>
@@ -1730,7 +1967,7 @@ export default function AlchemistCompass() {
             >
               <div className="flex items-center justify-between text-xs" style={{ color: currentTheme.text.tertiary }}>
                 <span>VERSION</span>
-                <span className="font-mono">1.2.0</span>
+                <span className="font-mono">1.3.0</span>
               </div>
               <div className="flex items-center justify-between text-xs mt-2" style={{ color: currentTheme.text.tertiary }}>
                 <span>BUILD</span>
