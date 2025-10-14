@@ -1,21 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User } from 'lucide-react';
-import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions } from './utils/geminiAPI';
+import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User, BookOpen, StickyNote, List } from 'lucide-react';
+import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions, bulkEvaluateTasks } from './utils/geminiAPI';
 import { themes, applyTheme } from './utils/themes';
 
 export default function AlchemistCompass() {
   const [currentPage, setCurrentPage] = useState('home');
   const [activeTab, setActiveTab] = useState('want');
   const [tasks, setTasks] = useState({ want: [], should: [] });
+  const [actionLogs, setActionLogs] = useState([]);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [bulkTaskText, setBulkTaskText] = useState('');
   const [selectedTask, setSelectedTask] = useState(null);
   const [mode, setMode] = useState('list');
   const [timeLeft, setTimeLeft] = useState(5 * 60);
+  const [selectedDuration, setSelectedDuration] = useState(5);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  const [preActionNote, setPreActionNote] = useState('');
+  const [postActionNote, setPostActionNote] = useState('');
+  const [startTime, setStartTime] = useState(null);
   const timerRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -34,6 +41,7 @@ export default function AlchemistCompass() {
   
   // Loading states
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [guide, setGuide] = useState(null);
   const [isLoadingGuide, setIsLoadingGuide] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -43,10 +51,12 @@ export default function AlchemistCompass() {
 
   const modelOptions = getModelOptions();
   const themeOptions = Object.values(themes);
+  const durationOptions = [5, 10, 15, 25, 30];
 
   // Load from localStorage
   useEffect(() => {
     const savedTasks = localStorage.getItem('alchemist-tasks');
+    const savedActionLogs = localStorage.getItem('alchemist-action-logs');
     const savedApiKey = localStorage.getItem('alchemist-api-key');
     const savedModel = localStorage.getItem('alchemist-model');
     const savedTheme = localStorage.getItem('alchemist-theme');
@@ -58,6 +68,7 @@ export default function AlchemistCompass() {
     const savedFiles = localStorage.getItem('alchemist-uploaded-files');
     
     if (savedTasks) setTasks(JSON.parse(savedTasks));
+    if (savedActionLogs) setActionLogs(JSON.parse(savedActionLogs));
     if (savedApiKey) setApiKey(savedApiKey);
     if (savedModel) setSelectedModel(savedModel);
     if (savedTheme) {
@@ -78,6 +89,10 @@ export default function AlchemistCompass() {
   useEffect(() => {
     localStorage.setItem('alchemist-tasks', JSON.stringify(tasks));
   }, [tasks]);
+
+  useEffect(() => {
+    localStorage.setItem('alchemist-action-logs', JSON.stringify(actionLogs));
+  }, [actionLogs]);
 
   useEffect(() => {
     if (apiKey) localStorage.setItem('alchemist-api-key', apiKey);
@@ -210,7 +225,9 @@ export default function AlchemistCompass() {
         title: newTaskTitle,
         category: activeTab,
         ...evaluation,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        preActionNote: '',
+        postActionNote: ''
       };
 
       setTasks(prev => ({
@@ -229,12 +246,78 @@ export default function AlchemistCompass() {
     }
   };
 
+  const processBulkTasks = async () => {
+    if (!bulkTaskText.trim()) return;
+    
+    setIsBulkProcessing(true);
+    setErrorMessage('');
+    
+    try {
+      const personalContext = {
+        userName,
+        userContext,
+        customInstructions,
+        uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
+      };
+
+      let newTasks;
+      if (apiKey) {
+        newTasks = await bulkEvaluateTasks(bulkTaskText, personalContext, apiKey, selectedModel);
+      } else {
+        // Fallback: Split by newlines and create mock tasks
+        const lines = bulkTaskText.split('\n').filter(line => line.trim());
+        newTasks = lines.map(line => {
+          const impact = Math.floor(Math.random() * 4) + 7;
+          const ease = Math.floor(Math.random() * 5) + 6;
+          return {
+            title: line.trim(),
+            category: 'want', // Default
+            impact,
+            ease,
+            estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
+            reason: 'API Keyを設定するとAI評価が有効になります',
+            score: impact * ease,
+            preActionNote: '',
+            postActionNote: ''
+          };
+        });
+      }
+
+      // Add IDs and timestamps
+      const tasksWithMeta = newTasks.map((task, index) => ({
+        ...task,
+        id: Date.now() + index,
+        createdAt: new Date().toISOString()
+      }));
+
+      // Merge into existing tasks
+      setTasks(prev => {
+        const updated = { ...prev };
+        tasksWithMeta.forEach(task => {
+          const category = task.category || 'want';
+          updated[category] = [...(updated[category] || []), task].sort((a, b) => b.score - a.score);
+        });
+        return updated;
+      });
+
+      setBulkTaskText('');
+      setShowBulkAdd(false);
+    } catch (error) {
+      console.error('Bulk task processing failed:', error);
+      setErrorMessage(error.message || '一括追加に失敗しました。API Keyやモデル設定を確認してください。');
+      setTimeout(() => setErrorMessage(''), 5000);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
   const selectTask = async (task) => {
     setSelectedTask(task);
     setMode('guide');
     setChatMessages([]);
     setGuide(null);
     setErrorMessage('');
+    setPreActionNote(task.preActionNote || '');
     
     const personalContext = {
       userName,
@@ -275,11 +358,22 @@ export default function AlchemistCompass() {
     }
   };
 
+  const savePreActionNote = () => {
+    setTasks(prev => ({
+      ...prev,
+      [activeTab]: prev[activeTab].map(t => 
+        t.id === selectedTask.id ? { ...t, preActionNote } : t
+      )
+    }));
+    setSelectedTask(prev => ({ ...prev, preActionNote }));
+  };
+
   const startTimer = () => {
     setMode('timer');
     setIsRunning(true);
     setIsPaused(false);
-    setTimeLeft(5 * 60);
+    setTimeLeft(selectedDuration * 60);
+    setStartTime(Date.now());
   };
 
   const togglePause = () => {
@@ -287,16 +381,35 @@ export default function AlchemistCompass() {
   };
 
   const completeTask = (status) => {
-    if (status === 'complete' || status === 'drop') {
+    if (status === 'complete') {
+      const actualDuration = startTime ? Math.floor((Date.now() - startTime) / 1000 / 60) : selectedDuration;
+      const logEntry = {
+        ...selectedTask,
+        completedAt: new Date().toISOString(),
+        actualDuration,
+        postActionNote,
+        status: 'completed'
+      };
+      setActionLogs(prev => [logEntry, ...prev]);
+      
+      setTasks(prev => ({
+        ...prev,
+        [activeTab]: prev[activeTab].filter(t => t.id !== selectedTask.id)
+      }));
+    } else if (status === 'drop') {
       setTasks(prev => ({
         ...prev,
         [activeTab]: prev[activeTab].filter(t => t.id !== selectedTask.id)
       }));
     }
+    
     setMode('list');
     setSelectedTask(null);
     setIsRunning(false);
-    setTimeLeft(5 * 60);
+    setTimeLeft(selectedDuration * 60);
+    setPostActionNote('');
+    setPreActionNote('');
+    setStartTime(null);
     setCurrentPage('home');
   };
 
@@ -350,6 +463,11 @@ export default function AlchemistCompass() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   const allTasks = [...tasks.want, ...tasks.should];
@@ -448,7 +566,7 @@ export default function AlchemistCompass() {
               >
                 <div className="flex items-center justify-center gap-2">
                   <Target className="w-4 h-4" />
-                  WANT ({currentTasks.length})
+                  WANT ({tasks.want.length})
                 </div>
               </button>
               <button
@@ -467,35 +585,47 @@ export default function AlchemistCompass() {
               >
                 <div className="flex items-center justify-center gap-2">
                   <Clock className="w-4 h-4" />
-                  SHOULD ({tasks.should?.length || 0})
+                  SHOULD ({tasks.should.length})
                 </div>
               </button>
             </div>
 
-            {/* Add Task Button */}
-            {!showAddTask ? (
-              <button
-                onClick={() => setShowAddTask(true)}
-                className="w-full py-4 mb-6 rounded-xl transition-all flex items-center justify-center gap-2"
-                style={{
-                  backgroundColor: currentTheme.bg.secondary,
-                  border: `1px solid ${currentTheme.border.default}`,
-                  color: currentTheme.text.secondary,
-                  boxShadow: currentTheme.shadow.button
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = currentTheme.accent.primary;
-                  e.currentTarget.style.color = currentTheme.accent.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = currentTheme.border.default;
-                  e.currentTarget.style.color = currentTheme.text.secondary;
-                }}
-              >
-                <Plus className="w-5 h-5" />
-                ADD NEW TASK
-              </button>
-            ) : (
+            {/* Add Task Buttons */}
+            <div className="flex gap-2 mb-6">
+              {!showAddTask && !showBulkAdd ? (
+                <>
+                  <button
+                    onClick={() => setShowAddTask(true)}
+                    className="flex-1 py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                    style={{
+                      backgroundColor: currentTheme.bg.secondary,
+                      border: `1px solid ${currentTheme.border.default}`,
+                      color: currentTheme.text.secondary,
+                      boxShadow: currentTheme.shadow.button
+                    }}
+                  >
+                    <Plus className="w-5 h-5" />
+                    ADD TASK
+                  </button>
+                  <button
+                    onClick={() => setShowBulkAdd(true)}
+                    className="flex-1 py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                    style={{
+                      backgroundColor: currentTheme.bg.secondary,
+                      border: `1px solid ${currentTheme.border.default}`,
+                      color: currentTheme.text.secondary,
+                      boxShadow: currentTheme.shadow.button
+                    }}
+                  >
+                    <List className="w-5 h-5" />
+                    BULK ADD
+                  </button>
+                </>
+              ) : null}
+            </div>
+
+            {/* Single Task Add */}
+            {showAddTask && (
               <div 
                 className="mb-6 p-4 rounded-xl"
                 style={{
@@ -546,6 +676,76 @@ export default function AlchemistCompass() {
                       setErrorMessage('');
                     }}
                     disabled={isEvaluating}
+                    className="py-2 px-4 rounded-lg disabled:opacity-50"
+                    style={{
+                      backgroundColor: currentTheme.bg.tertiary,
+                      color: currentTheme.text.secondary,
+                      boxShadow: currentTheme.shadow.subtle
+                    }}
+                  >
+                    CANCEL
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Bulk Task Add */}
+            {showBulkAdd && (
+              <div 
+                className="mb-6 p-4 rounded-xl"
+                style={{
+                  backgroundColor: currentTheme.bg.secondary,
+                  border: `1px solid ${currentTheme.accent.secondary}`,
+                  boxShadow: `0 4px 12px ${currentTheme.accent.secondary}30`
+                }}
+              >
+                <div className="text-xs mb-2" style={{ color: currentTheme.text.secondary }}>
+                  NotionやObsidianからコピペしてタスクを一括追加
+                </div>
+                <textarea
+                  value={bulkTaskText}
+                  onChange={(e) => setBulkTaskText(e.target.value)}
+                  placeholder={"タスク1\nタスク2\nタスク3\n...\n\n1行1タスクで入力してください"}
+                  rows={6}
+                  className="w-full rounded-lg px-3 py-2 mb-3 outline-none resize-none"
+                  style={{
+                    backgroundColor: currentTheme.bg.input,
+                    border: `1px solid ${currentTheme.border.default}`,
+                    color: currentTheme.text.primary
+                  }}
+                  autoFocus
+                  disabled={isBulkProcessing}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={processBulkTasks}
+                    disabled={isBulkProcessing}
+                    className="flex-1 py-2 px-4 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{
+                      background: currentTheme.gradient.secondary,
+                      color: '#ffffff',
+                      boxShadow: currentTheme.shadow.accentAlt
+                    }}
+                  >
+                    {isBulkProcessing ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        PROCESSING...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        AI AUTO-CLASSIFY & ADD
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowBulkAdd(false);
+                      setBulkTaskText('');
+                      setErrorMessage('');
+                    }}
+                    disabled={isBulkProcessing}
                     className="py-2 px-4 rounded-lg disabled:opacity-50"
                     style={{
                       backgroundColor: currentTheme.bg.tertiary,
@@ -722,6 +922,33 @@ export default function AlchemistCompass() {
             >
               <h2 className="text-xl font-bold mb-4" style={{ color: currentTheme.text.primary }}>{selectedTask.title}</h2>
               
+              {/* Pre-Action Sticky Note */}
+              <div 
+                className="mb-6 p-4 rounded-lg"
+                style={{
+                  backgroundColor: `${currentTheme.status.warning}10`,
+                  border: `1px solid ${currentTheme.status.warning}30`
+                }}
+              >
+                <div className="flex items-center gap-2 text-xs font-bold mb-2" style={{ color: currentTheme.status.warning }}>
+                  <StickyNote className="w-4 h-4" />
+                  PRE-ACTION NOTE (行動前のコア信念・メモ)
+                </div>
+                <textarea
+                  value={preActionNote}
+                  onChange={(e) => setPreActionNote(e.target.value)}
+                  onBlur={savePreActionNote}
+                  placeholder="このタスクに取り組む前の気持ち、意図、目標などを記録..."
+                  rows={3}
+                  className="w-full rounded px-2 py-1 text-sm outline-none resize-none"
+                  style={{
+                    backgroundColor: currentTheme.bg.input,
+                    border: `1px solid ${currentTheme.border.default}`,
+                    color: currentTheme.text.primary
+                  }}
+                />
+              </div>
+              
               {isLoadingGuide ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader className="w-8 h-8 animate-spin" style={{ color: currentTheme.accent.primary }} />
@@ -775,6 +1002,31 @@ export default function AlchemistCompass() {
                 </>
               )}
 
+              {/* Timer Duration Selector */}
+              <div className="mb-4">
+                <div className="text-xs font-bold mb-2" style={{ color: currentTheme.text.secondary }}>SELECT TIMER DURATION</div>
+                <div className="flex gap-2">
+                  {durationOptions.map(duration => (
+                    <button
+                      key={duration}
+                      onClick={() => setSelectedDuration(duration)}
+                      className="flex-1 py-2 rounded-lg text-sm transition-all"
+                      style={selectedDuration === duration ? {
+                        background: currentTheme.gradient.primary,
+                        color: '#ffffff',
+                        boxShadow: currentTheme.shadow.accent
+                      } : {
+                        backgroundColor: currentTheme.bg.input,
+                        border: `1px solid ${currentTheme.border.default}`,
+                        color: currentTheme.text.secondary
+                      }}
+                    >
+                      {duration}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 onClick={startTimer}
                 className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
@@ -785,7 +1037,7 @@ export default function AlchemistCompass() {
                 }}
               >
                 <Play className="w-5 h-5" />
-                START 5-MIN TIMER
+                START {selectedDuration}-MIN TIMER
               </button>
             </div>
           </div>
@@ -929,10 +1181,38 @@ export default function AlchemistCompass() {
 
         {/* HOME PAGE - COMPLETE MODE */}
         {currentPage === 'home' && mode === 'complete' && selectedTask && (
-          <div className="text-center space-y-6">
-            <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold" style={{ color: currentTheme.text.primary }}>TASK COMPLETED!</h2>
-            <p style={{ color: currentTheme.text.secondary }}>{selectedTask.title}</p>
+          <div className="space-y-6">
+            <div className="text-center space-y-6">
+              <div className="text-6xl mb-4">🎉</div>
+              <h2 className="text-2xl font-bold" style={{ color: currentTheme.text.primary }}>TASK COMPLETED!</h2>
+              <p style={{ color: currentTheme.text.secondary }}>{selectedTask.title}</p>
+            </div>
+
+            {/* Post-Action Sticky Note */}
+            <div 
+              className="p-4 rounded-lg"
+              style={{
+                backgroundColor: `${currentTheme.status.success}10`,
+                border: `1px solid ${currentTheme.status.success}30`
+              }}
+            >
+              <div className="flex items-center gap-2 text-xs font-bold mb-2" style={{ color: currentTheme.status.success }}>
+                <StickyNote className="w-4 h-4" />
+                POST-ACTION NOTE (学びや気づき)
+              </div>
+              <textarea
+                value={postActionNote}
+                onChange={(e) => setPostActionNote(e.target.value)}
+                placeholder="このタスクから学んだこと、改善点、次に活かせることを記録..."
+                rows={4}
+                className="w-full rounded px-2 py-1 text-sm outline-none resize-none"
+                style={{
+                  backgroundColor: currentTheme.bg.input,
+                  border: `1px solid ${currentTheme.border.default}`,
+                  color: currentTheme.text.primary
+                }}
+              />
+            </div>
 
             <div className="flex gap-3 justify-center">
               <button
@@ -978,6 +1258,139 @@ export default function AlchemistCompass() {
           </div>
         )}
 
+        {/* ACTION LOG PAGE */}
+        {currentPage === 'logs' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">ACTION LOG</h2>
+              <div className="text-sm" style={{ color: currentTheme.text.tertiary }}>
+                {actionLogs.length} 完了済みタスク
+              </div>
+            </div>
+
+            {actionLogs.length === 0 ? (
+              <div className="text-center py-12" style={{ color: currentTheme.text.tertiary }}>
+                <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">まだ記録がありません</p>
+                <p className="text-xs mt-1">タスクを完了すると、ここに記録されます</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {actionLogs.map((log, index) => (
+                  <div
+                    key={index}
+                    className="rounded-xl p-6"
+                    style={{
+                      backgroundColor: currentTheme.bg.secondary,
+                      border: `1px solid ${currentTheme.border.default}`,
+                      boxShadow: currentTheme.shadow.card
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg mb-2" style={{ color: currentTheme.text.primary }}>
+                          {log.title}
+                        </h3>
+                        <div className="flex items-center gap-3 text-xs" style={{ color: currentTheme.text.tertiary }}>
+                          <span>{formatDate(log.completedAt)}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {log.actualDuration}分
+                          </span>
+                          <span>•</span>
+                          <span className={log.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
+                            {log.category.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <div 
+                        className="px-3 py-1 rounded text-xs"
+                        style={{
+                          backgroundColor: `${currentTheme.status.success}20`,
+                          border: `1px solid ${currentTheme.status.success}50`,
+                          color: currentTheme.status.success
+                        }}
+                      >
+                        COMPLETED
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs" style={{ color: currentTheme.text.secondary }}>IMPACT</span>
+                          <span className="text-xs" style={{ color: currentTheme.text.primary }}>{log.impact}/10</span>
+                        </div>
+                        <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
+                          <div
+                            className="h-full"
+                            style={{ 
+                              width: `${(log.impact / 10) * 100}%`,
+                              background: currentTheme.gradient.primary
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs" style={{ color: currentTheme.text.secondary }}>EASE</span>
+                          <span className="text-xs" style={{ color: currentTheme.text.primary }}>{log.ease}/10</span>
+                        </div>
+                        <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
+                          <div
+                            className="h-full"
+                            style={{ 
+                              width: `${(log.ease / 10) * 100}%`,
+                              background: currentTheme.gradient.secondary
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {log.preActionNote && (
+                      <div 
+                        className="mb-3 p-3 rounded-lg"
+                        style={{
+                          backgroundColor: `${currentTheme.status.warning}10`,
+                          border: `1px solid ${currentTheme.status.warning}30`
+                        }}
+                      >
+                        <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.warning }}>
+                          <StickyNote className="w-3 h-3" />
+                          行動前メモ
+                        </div>
+                        <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
+                          {log.preActionNote}
+                        </p>
+                      </div>
+                    )}
+
+                    {log.postActionNote && (
+                      <div 
+                        className="p-3 rounded-lg"
+                        style={{
+                          backgroundColor: `${currentTheme.status.success}10`,
+                          border: `1px solid ${currentTheme.status.success}30`
+                        }}
+                      >
+                        <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.success }}>
+                          <StickyNote className="w-3 h-3" />
+                          学びと気づき
+                        </div>
+                        <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
+                          {log.postActionNote}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ANALYTICS PAGE */}
         {currentPage === 'analytics' && (
           <div className="space-y-6">
@@ -986,8 +1399,8 @@ export default function AlchemistCompass() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'TOTAL TASKS', value: allTasks.length, color: currentTheme.accent.primary },
+                { label: 'COMPLETED', value: actionLogs.length, color: currentTheme.status.success },
                 { label: 'WANT TASKS', value: tasks.want.length, color: currentTheme.accent.secondary },
-                { label: 'SHOULD TASKS', value: tasks.should.length, color: currentTheme.status.success },
                 { label: 'AVG SCORE', value: avgScore, color: currentTheme.accent.tertiary }
               ].map((stat, i) => (
                 <div 
@@ -1013,35 +1426,29 @@ export default function AlchemistCompass() {
                 boxShadow: currentTheme.shadow.card
               }}
             >
-              <h3 className="text-sm font-bold mb-4" style={{ color: currentTheme.text.secondary }}>TASK DISTRIBUTION</h3>
+              <h3 className="text-sm font-bold mb-4" style={{ color: currentTheme.text.secondary }}>RECENT ACTIVITY</h3>
               <div className="h-48 flex items-end justify-around gap-2">
-                {[65, 45, 80, 55, 70, 60, 85].map((height, i) => (
-                  <div 
-                    key={i}
-                    className="flex-1 rounded-t transition-all duration-500" 
-                    style={{ 
-                      height: `${height}%`,
-                      background: currentTheme.gradient.primary,
-                      boxShadow: `0 -2px 8px ${currentTheme.accent.primary}40`
-                    }} 
-                  />
-                ))}
-              </div>
-              <div className="flex justify-around mt-2 text-xs" style={{ color: currentTheme.text.tertiary }}>
-                <span>Mon</span>
-                <span>Tue</span>
-                <span>Wed</span>
-                <span>Thu</span>
-                <span>Fri</span>
-                <span>Sat</span>
-                <span>Sun</span>
+                {actionLogs.slice(0, 7).reverse().map((log, i) => {
+                  const height = Math.min((log.actualDuration / 60) * 100, 100);
+                  return (
+                    <div 
+                      key={i}
+                      className="flex-1 rounded-t transition-all duration-500" 
+                      style={{ 
+                        height: `${height}%`,
+                        background: currentTheme.gradient.primary,
+                        boxShadow: `0 -2px 8px ${currentTheme.accent.primary}40`,
+                        minHeight: '10%'
+                      }} 
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>
         )}
 
-        {/* SETTINGS PAGE - Full implementation from previous code */}
-        {/* (Keeping existing settings implementation) */}
+        {/* SETTINGS PAGE */}
         {currentPage === 'settings' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold mb-6">SETTINGS</h2>
@@ -1323,11 +1730,11 @@ export default function AlchemistCompass() {
             >
               <div className="flex items-center justify-between text-xs" style={{ color: currentTheme.text.tertiary }}>
                 <span>VERSION</span>
-                <span className="font-mono">1.1.1</span>
+                <span className="font-mono">1.2.0</span>
               </div>
               <div className="flex items-center justify-between text-xs mt-2" style={{ color: currentTheme.text.tertiary }}>
                 <span>BUILD</span>
-                <span className="font-mono">2025.10.08</span>
+                <span className="font-mono">2025.10.14</span>
               </div>
             </div>
           </div>
@@ -1345,7 +1752,8 @@ export default function AlchemistCompass() {
         <div className="flex justify-around py-3">
           {[
             { page: 'home', icon: Home, label: 'HOME' },
-            { page: 'analytics', icon: BarChart3, label: 'ANALYTICS' },
+            { page: 'logs', icon: BookOpen, label: 'LOGS' },
+            { page: 'analytics', icon: BarChart3, label: 'STATS' },
             { page: 'settings', icon: Settings, label: 'SETTINGS' }
           ].map(({ page, icon: Icon, label }) => (
             <button
