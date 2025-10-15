@@ -425,6 +425,69 @@ export async function generateGuide(task, userContext = {}, apiKey, model = 'gem
 }
 
 /**
+ * Generate post-action summary and insights
+ * NEW FUNCTION - Auto-generates "what you did" after completing a task
+ * @param {object} task - Completed task object
+ * @param {number} actualDuration - Actual time spent in minutes
+ * @param {string} preActionNote - Note before action
+ * @param {string} apiKey - Gemini API key
+ * @param {string} model - Model ID
+ * @returns {Promise<string>} - Generated summary
+ */
+export async function generateActionSummary(task, actualDuration, preActionNote = '', apiKey, model = 'gemini-2.5-flash') {
+  const timeDiff = actualDuration - (task.plannedDuration || task.estimatedMinutes || 30);
+  const timeDiffText = timeDiff > 0 
+    ? `予定より${timeDiff}分長くかかった` 
+    : timeDiff < 0 
+    ? `予定より${Math.abs(timeDiff)}分早く完了` 
+    : '予定通り完了';
+
+  const prompt = `あなたはパーソナルAIコーチです。完了したタスクについて、ユーザーが「何をやったか」「何を学んだか」を自動記録してください。
+
+【完了したタスク】
+- タイトル: "${task.title}"
+- カテゴリ: ${task.category === 'want' ? 'やりたいこと' : 'やるべきこと'}
+- 実際の作業時間: ${actualDuration}分
+- 予定時間: ${task.plannedDuration || task.estimatedMinutes || 30}分
+- 時間差: ${timeDiffText}
+- Impact評価: ${task.impact}/10
+- Ease評価: ${task.ease}/10
+
+${preActionNote ? `【行動前のメモ】\n${preActionNote}\n` : ''}
+
+【記録の方針】
+1. **何をやったか**: タスクから推測される具体的な行動内容
+   - システム構築・自動化・コーディング・デザイン・学習など
+   - 技術的な詳細や使用ツールを含める
+   - 50-80文字で具体的に
+
+2. **学びと気づき**: このタスクから得られた洞察
+   - 効率化のヒント
+   - 今後の改善点
+   - 新しい発見や理解
+   - 40-60文字で簡潔に
+
+【出力形式】
+以下の形式で、改行で区切って出力してください。
+
+【実施内容】
+(何をやったか 50-80文字)
+
+【学びと気づき】
+(学んだこと 40-60文字)
+`;
+
+  try {
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.8, 500);
+    return text.trim().slice(0, 300);
+  } catch (error) {
+    console.error('Action summary generation failed:', error);
+    // Fallback summary
+    return `【実施内容】\n「${task.title}」を${actualDuration}分で完了。${timeDiffText}。\n\n【学びと気づき】\nタスクを完了できました。次回はさらに効率化を目指します。`;
+  }
+}
+
+/**
  * Generate chat response
  * @param {string} message - User message
  * @param {object} taskContext - Current task context
