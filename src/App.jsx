@@ -1,7 +1,7 @@
 //mainブランチにコミットを変更しマージするためのコメント
 import React, { useState, useEffect, useRef } from 'react';
 import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User, BookOpen, StickyNote, List, Edit, X, Eye } from 'lucide-react';
-import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions, bulkEvaluateTasks } from './utils/geminiAPI';
+import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions, bulkEvaluateTasks, generateTaskCompletionSummary } from './utils/geminiAPI';
 import { themes, applyTheme } from './utils/themes';
 
 export default function AlchemistCompass() {
@@ -27,6 +27,7 @@ export default function AlchemistCompass() {
   const [startTime, setStartTime] = useState(null);
   const [editingLogIndex, setEditingLogIndex] = useState(null);
   const [editingLogData, setEditingLogData] = useState(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const timerRef = useRef(null);
   const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -426,15 +427,36 @@ export default function AlchemistCompass() {
     setIsPaused(!isPaused);
   };
 
-  const completeTask = (status) => {
+  const completeTask = async (status) => {
     if (status === 'complete') {
       const actualDuration = startTime ? Math.floor((Date.now() - startTime) / 1000 / 60) : selectedDuration;
+      
+      // Auto-generate completion summary if API key is available
+      let completionSummary = postActionNote;
+      if (apiKey && !postActionNote.trim()) {
+        setIsGeneratingSummary(true);
+        try {
+          const personalContext = {
+            userName,
+            userContext,
+            customInstructions,
+            uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
+          };
+          completionSummary = await generateTaskCompletionSummary(selectedTask, personalContext, apiKey, selectedModel);
+        } catch (error) {
+          console.error('Failed to generate completion summary:', error);
+          completionSummary = postActionNote || `タスク「${selectedTask.title}」を完了しました。`;
+        } finally {
+          setIsGeneratingSummary(false);
+        }
+      }
+      
       const logEntry = {
         ...selectedTask,
         completedAt: new Date().toISOString(),
         actualDuration,
         plannedDuration: selectedDuration,
-        postActionNote,
+        postActionNote: completionSummary,
         status: 'completed'
       };
       setActionLogs(prev => [logEntry, ...prev]);
@@ -1353,7 +1375,8 @@ export default function AlchemistCompass() {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => completeTask('complete')}
-                className="py-3 px-6 rounded-xl flex items-center gap-2"
+                disabled={isGeneratingSummary}
+                className="py-3 px-6 rounded-xl flex items-center gap-2 disabled:opacity-50"
                 style={{
                   backgroundColor: `${currentTheme.status.success}20`,
                   border: `1px solid ${currentTheme.status.success}50`,
@@ -1361,12 +1384,22 @@ export default function AlchemistCompass() {
                   boxShadow: `0 2px 8px ${currentTheme.status.success}30`
                 }}
               >
-                <Check className="w-5 h-5" />
-                DONE
+                {isGeneratingSummary ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    GENERATING...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5" />
+                    DONE
+                  </>
+                )}
               </button>
               <button
                 onClick={() => completeTask('defer')}
-                className="py-3 px-6 rounded-xl flex items-center gap-2"
+                disabled={isGeneratingSummary}
+                className="py-3 px-6 rounded-xl flex items-center gap-2 disabled:opacity-50"
                 style={{
                   backgroundColor: currentTheme.bg.secondary,
                   border: `1px solid ${currentTheme.border.default}`,
@@ -1379,7 +1412,8 @@ export default function AlchemistCompass() {
               </button>
               <button
                 onClick={() => completeTask('drop')}
-                className="py-3 px-6 rounded-xl flex items-center gap-2"
+                disabled={isGeneratingSummary}
+                className="py-3 px-6 rounded-xl flex items-center gap-2 disabled:opacity-50"
                 style={{
                   backgroundColor: `${currentTheme.status.error}20`,
                   border: `1px solid ${currentTheme.status.error}50`,
@@ -1394,8 +1428,8 @@ export default function AlchemistCompass() {
           </div>
         )}
 
-        {/* ACTION LOG PAGE with Edit/Delete */}
-        {currentPage === 'logs' && (
+        {/* ACTION LOG PAGE with Edit/Delete/Detail */}
+        {currentPage === 'logs' && mode !== 'log-detail' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">ACTION LOG</h2>
@@ -1453,7 +1487,7 @@ export default function AlchemistCompass() {
                         </div>
 
                         <div>
-                          <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>学びと気づき</label>
+                          <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>完了内容（何をやったか）</label>
                           <textarea
                             value={editingLogData.postActionNote || ''}
                             onChange={(e) => setEditingLogData({...editingLogData, postActionNote: e.target.value})}
@@ -1525,6 +1559,17 @@ export default function AlchemistCompass() {
                             >
                               COMPLETED
                             </div>
+                            <button
+                              onClick={() => viewLogDetail(log)}
+                              className="p-2 rounded-lg"
+                              style={{
+                                backgroundColor: `${currentTheme.accent.secondary}20`,
+                                border: `1px solid ${currentTheme.accent.secondary}50`,
+                                color: currentTheme.accent.secondary
+                              }}
+                            >
+                              <Eye className="w-3 h-3" />
+                            </button>
                             <button
                               onClick={() => startEditingLog(index)}
                               className="p-2 rounded-lg"
@@ -1611,7 +1656,7 @@ export default function AlchemistCompass() {
                           >
                             <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.success }}>
                               <StickyNote className="w-3 h-3" />
-                              学びと気づき
+                              完了内容（何をやったか）
                             </div>
                             <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
                               {log.postActionNote}
@@ -1624,6 +1669,117 @@ export default function AlchemistCompass() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* LOG DETAIL PAGE */}
+        {currentPage === 'logs' && mode === 'log-detail' && selectedLog && (
+          <div className="space-y-6">
+            <button
+              onClick={() => {
+                setMode('list');
+                setSelectedLog(null);
+              }}
+              className="text-sm flex items-center gap-1 transition-colors"
+              style={{ color: currentTheme.text.secondary }}
+              onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
+              onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
+            >
+              ← BACK TO LOGS
+            </button>
+
+            <div 
+              className="rounded-xl p-6"
+              style={{
+                backgroundColor: currentTheme.bg.secondary,
+                border: `1px solid ${currentTheme.border.default}`,
+                boxShadow: currentTheme.shadow.card
+              }}
+            >
+              <h2 className="text-2xl font-bold mb-4" style={{ color: currentTheme.text.primary }}>{selectedLog.title}</h2>
+              
+              <div className="flex items-center gap-3 text-xs mb-6" style={{ color: currentTheme.text.tertiary }}>
+                <span>{formatDate(selectedLog.completedAt)}</span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {selectedLog.actualDuration}分
+                </span>
+                <span>•</span>
+                <span className={selectedLog.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
+                  {selectedLog.category.toUpperCase()}
+                </span>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs" style={{ color: currentTheme.text.secondary }}>IMPACT</span>
+                    <span className="text-xs" style={{ color: currentTheme.text.primary }}>{selectedLog.impact}/10</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
+                    <div
+                      className="h-full"
+                      style={{ 
+                        width: `${(selectedLog.impact / 10) * 100}%`,
+                        background: currentTheme.gradient.primary
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs" style={{ color: currentTheme.text.secondary }}>EASE</span>
+                    <span className="text-xs" style={{ color: currentTheme.text.primary }}>{selectedLog.ease}/10</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: currentTheme.bg.input }}>
+                    <div
+                      className="h-full"
+                      style={{ 
+                        width: `${(selectedLog.ease / 10) * 100}%`,
+                        background: currentTheme.gradient.secondary
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {selectedLog.preActionNote && (
+                <div 
+                  className="mb-6 p-4 rounded-lg"
+                  style={{
+                    backgroundColor: `${currentTheme.status.warning}10`,
+                    border: `1px solid ${currentTheme.status.warning}30`
+                  }}
+                >
+                  <div className="text-xs font-bold mb-2 flex items-center gap-1" style={{ color: currentTheme.status.warning }}>
+                    <StickyNote className="w-4 h-4" />
+                    行動前メモ
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: currentTheme.text.secondary }}>
+                    {selectedLog.preActionNote}
+                  </p>
+                </div>
+              )}
+
+              {selectedLog.postActionNote && (
+                <div 
+                  className="p-4 rounded-lg"
+                  style={{
+                    backgroundColor: `${currentTheme.status.success}10`,
+                    border: `1px solid ${currentTheme.status.success}30`
+                  }}
+                >
+                  <div className="text-xs font-bold mb-2 flex items-center gap-1" style={{ color: currentTheme.status.success }}>
+                    <StickyNote className="w-4 h-4" />
+                    完了内容（何をやったか）
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: currentTheme.text.secondary }}>
+                    {selectedLog.postActionNote}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1997,6 +2153,7 @@ export default function AlchemistCompass() {
               onClick={() => {
                 setCurrentPage(page);
                 if (page === 'home') setMode('list');
+                if (page === 'logs') setMode('list');
               }}
               className="flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all"
               style={currentPage === page ? {
