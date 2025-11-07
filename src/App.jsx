@@ -77,7 +77,7 @@ export default function AlchemistCompass() {
         const { scrollTop, scrollHeight, clientHeight } = element;
         const isScrolled = scrollTop > 0;
         // スクロールした瞬間、または最下部に近い場合に表示
-        // 繧ｹ繧ｯ繝ｭ繝ｼ繝ｫ縺励◆迸ｬ髢薙√∪縺溘・譛荳矩Κ縺ｫ霑代＞蝣ｴ蜷医↓陦ｨ遉ｺ
+        // チャットが最下部に近い場合に自動スクロール
         setShowBottomNav(isScrolled || isNearBottom);
       }
     };
@@ -870,7 +870,7 @@ export default function AlchemistCompass() {
                 }}
               >
                 <div className="text-xs mb-2" style={{ color: currentTheme.text.secondary }}>
-                  Notion繧Оbsidian縺九ｉ繧ｳ繝斐・縺励※繧ｿ繧ｹ繧ｯ繧剃ｸ諡ｬ霑ｽ蜉
+                  NotionやObsidianからコピーしてタスクを一括追加
                 </div>
                 <textarea
                   value={bulkTaskText}
