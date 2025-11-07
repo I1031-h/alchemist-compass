@@ -1606,7 +1606,7 @@ export default function AlchemistCompass() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">ACTION LOG</h2>
               <div className="text-sm" style={{ color: currentTheme.text.tertiary }}>
-                {actionLogs.length} 件のログ
+                {actionLogs.length}件のログ
               </div>
             </div>
 
