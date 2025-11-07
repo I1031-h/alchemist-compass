@@ -678,7 +678,7 @@ export default function AlchemistCompass() {
                   boxShadow: `0 2px 8px ${currentTheme.status.warning}30`
                 }}
               >
-                 OFFLINE
+                ● OFFLINE
               </div>
             )}
           </div>
@@ -2082,7 +2082,7 @@ export default function AlchemistCompass() {
                     <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: currentTheme.accent.primary }} className="hover:underline">
                       Get API Key
                     </a>
-                    {' 窶｢ Free tier available'}
+                    {' ・ Free tier available'}
                   </p>
                 </div>
                 
