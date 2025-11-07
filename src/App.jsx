@@ -236,7 +236,7 @@ export default function AlchemistCompass() {
 
   const deleteTask = (e, taskId) => {
     e.stopPropagation();
-    if (window.confirm('縺薙・繧ｿ繧ｹ繧ｯ繧貞炎髯､縺励∪縺吶°?')) {
+    if (window.confirm('このタスクを削除しますか?')) {
       setTasks(prev => ({
         ...prev,
         [activeTab]: prev[activeTab].filter(t => t.id !== taskId)
@@ -245,7 +245,7 @@ export default function AlchemistCompass() {
   };
 
   const bulkDeleteTasks = () => {
-    if (window.confirm(`${activeTab.toUpperCase()}繝懊・繝峨・蜈ｨ縺ｦ縺ｮ繧ｿ繧ｹ繧ｯ (${tasks[activeTab].length}莉ｶ) 繧貞炎髯､縺励∪縺吶°?`)) {
+    if (window.confirm(`${activeTab.toUpperCase()}ボードのすべてのタスク (${tasks[activeTab].length}件) を削除しますか?`)) {
       setTasks(prev => ({
         ...prev,
         [activeTab]: []
@@ -254,7 +254,7 @@ export default function AlchemistCompass() {
   };
 
   const deleteLog = (index) => {
-    if (window.confirm('縺薙・繝ｭ繧ｰ繧貞炎髯､縺励∪縺吶°?')) {
+    if (window.confirm('このログを削除しますか?')) {
       setActionLogs(prev => prev.filter((_, i) => i !== index));
     }
   };
@@ -455,43 +455,54 @@ export default function AlchemistCompass() {
   };
 
   const quickCompleteTask = async (task) => {
-    // 即座に完了してLOGSタブに移動
+    // 即座に完了してLOGSタブに移動（パフォーマンス改善：先にUI更新）
     const actualDuration = task.estimatedMinutes || 30;
-    const personalContext = {
-      customInstructions,
-      uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
-    };
+    const completedAt = new Date().toISOString();
     
-    let completionSummary = '';
-    if (apiKey) {
-      try {
-        completionSummary = await generateTaskCompletionSummary(task, personalContext, apiKey, selectedModel);
-      } catch (error) {
-        console.error('Failed to generate completion summary:', error);
-        completionSummary = `完了: ${task.title}を実行しました。`;
-      }
-    } else {
-      completionSummary = `完了: ${task.title}を実行しました。`;
-    }
-    
-    const logEntry = {
-      ...task,
-      completedAt: new Date().toISOString(),
-      actualDuration,
-      plannedDuration: task.estimatedMinutes || 30,
-      postActionNote: completionSummary,
-      status: 'completed'
-    };
-    
-    setActionLogs(prev => [logEntry, ...prev]);
+    // まずUIを即座に更新（タスクを削除してLOGSタブに移動）
     setTasks(prev => ({
       ...prev,
       [task.category]: prev[task.category].filter(t => t.id !== task.id)
     }));
     
-    // LOGSタブに移動
+    // ログエントリを追加（初期値で、後で更新される可能性がある）
+    const logEntry = {
+      ...task,
+      id: task.id || Date.now(),
+      completedAt,
+      actualDuration,
+      plannedDuration: task.estimatedMinutes || 30,
+      postActionNote: `完了: ${task.title}を実行しました。`,
+      status: 'completed'
+    };
+    
+    setActionLogs(prev => [logEntry, ...prev]);
+    
+    // LOGSタブに即座に移動
     setCurrentPage('logs');
     setLogActiveTab(task.category);
+    
+    // その後、非同期で完了サマリーを生成（バックグラウンド処理）
+    if (apiKey) {
+      const personalContext = {
+        customInstructions,
+        uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
+      };
+      
+      // 非同期で完了サマリーを生成（UIブロックしない）
+      generateTaskCompletionSummary(task, personalContext, apiKey, selectedModel)
+        .then(summary => {
+          // ログエントリを更新
+          setActionLogs(prev => prev.map(log => 
+            log.id === task.id && log.completedAt === completedAt
+              ? { ...log, postActionNote: summary }
+              : log
+          ));
+        })
+        .catch(error => {
+          console.error('Failed to generate completion summary:', error);
+        });
+    }
   };
 
   const savePreActionNote = () => {
@@ -864,7 +875,7 @@ export default function AlchemistCompass() {
                 <textarea
                   value={bulkTaskText}
                   onChange={(e) => setBulkTaskText(e.target.value)}
-                  placeholder={"繧ｿ繧ｹ繧ｯ1\n繧ｿ繧ｹ繧ｯ2\n繧ｿ繧ｹ繧ｯ3\n...\n\n1陦・繧ｿ繧ｹ繧ｯ縺ｧ蜈･蜉帙＠縺ｦ縺上□縺輔＞"}
+                  placeholder={"タスク1\nタスク2\nタスク3\n...\n\n1行に1タスクで入力してください"}
                   rows={6}
                   className="w-full rounded-lg px-3 py-2 mb-3 outline-none resize-none"
                   style={{
@@ -1104,13 +1115,13 @@ export default function AlchemistCompass() {
               >
                 <div className="flex items-center gap-2 text-xs font-bold mb-2" style={{ color: currentTheme.status.warning }}>
                   <StickyNote className="w-4 h-4" />
-                  PRE-ACTION NOTE (陦悟虚蜑阪・繧ｳ繧｢菫｡蠢ｵ繝ｻ繝｡繝｢)
+                  PRE-ACTION NOTE (行動前のメモ・目標・意図)
                 </div>
                 <textarea
                   value={preActionNote}
                   onChange={(e) => setPreActionNote(e.target.value)}
                   onBlur={savePreActionNote}
-                  placeholder="縺薙・繧ｿ繧ｹ繧ｯ縺ｫ蜿悶ｊ邨・・蜑阪・豌玲戟縺｡縲∵э蝗ｳ縲∫岼讓吶↑縺ｩ繧定ｨ倬鹸..."
+                  placeholder="このタスクに取り組む前に、目標や意図を記録してください。例：完了させたいこと、注意点、期待する結果..."
                   rows={3}
                   className="w-full rounded px-2 py-1 text-sm outline-none resize-none"
                   style={{
@@ -1185,40 +1196,34 @@ export default function AlchemistCompass() {
                         </div>
                       )}
                     </div>
-                    <div className="space-y-2">
+                    <div>
                       {editingGuideSteps ? (
-                        editedSteps.map((step, i) => (
-                          <textarea
-                            key={i}
-                            value={step}
-                            onChange={(e) => {
-                              const newSteps = [...editedSteps];
-                              newSteps[i] = e.target.value;
-                              setEditedSteps(newSteps);
-                            }}
-                            className="w-full p-3 rounded-lg text-sm outline-none resize-none"
-                            rows={2}
-                            style={{
-                              backgroundColor: currentTheme.bg.input,
-                              border: `1px solid ${currentTheme.border.default}`,
-                              color: currentTheme.text.primary
-                            }}
-                          />
-                        ))
+                        <textarea
+                          value={editedSteps.join('\n')}
+                          onChange={(e) => {
+                            setEditedSteps(e.target.value.split('\n').filter(s => s.trim()));
+                          }}
+                          className="w-full p-3 rounded-lg text-sm outline-none resize-none"
+                          rows={8}
+                          style={{
+                            backgroundColor: currentTheme.bg.input,
+                            border: `1px solid ${currentTheme.border.default}`,
+                            color: currentTheme.text.primary
+                          }}
+                          placeholder="手順を1行ずつ入力してください"
+                        />
                       ) : (
-                        (guide.steps || []).map((step, i) => (
-                          <div 
-                            key={i} 
-                            className="p-3 rounded-lg text-sm leading-relaxed"
-                            style={{
-                              backgroundColor: currentTheme.bg.input,
-                              border: `1px solid ${currentTheme.border.default}`,
-                              color: currentTheme.text.primary
-                            }}
-                          >
-                            {i + 1}. {step}
-                          </div>
-                        ))
+                        <textarea
+                          value={(guide.steps || []).map((step, i) => `${i + 1}. ${step}`).join('\n')}
+                          readOnly
+                          className="w-full p-3 rounded-lg text-sm leading-relaxed resize-none"
+                          rows={8}
+                          style={{
+                            backgroundColor: currentTheme.bg.input,
+                            border: `1px solid ${currentTheme.border.default}`,
+                            color: currentTheme.text.primary
+                          }}
+                        />
                       )}
                     </div>
                   </div>
@@ -1293,7 +1298,7 @@ export default function AlchemistCompass() {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && sendMessage()}
-                        placeholder="縺薙・繧｢繝励Ο繝ｼ繝√↓縺､縺・※雉ｪ蝠上ｄ繝輔ぅ繝ｼ繝峨ヰ繝・け繧・.."
+                        placeholder="質問や相談を入力してください..."
                         className="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
                         style={{
                           backgroundColor: currentTheme.bg.input,
@@ -1521,12 +1526,12 @@ export default function AlchemistCompass() {
             >
               <div className="flex items-center gap-2 text-xs font-bold mb-2" style={{ color: currentTheme.status.success }}>
                 <StickyNote className="w-4 h-4" />
-                POST-ACTION NOTE (蟄ｦ縺ｳ繧・ｰ励▼縺・
+                POST-ACTION NOTE (完了後のメモ・学び・気づき)
               </div>
               <textarea
                 value={postActionNote}
                 onChange={(e) => setPostActionNote(e.target.value)}
-                placeholder="縺薙・繧ｿ繧ｹ繧ｯ縺九ｉ蟄ｦ繧薙□縺薙→縲∵隼蝟・せ縲∵ｬ｡縺ｫ豢ｻ縺九○繧九％縺ｨ繧定ｨ倬鹸..."
+                placeholder="このタスクを完了した後、学びや気づきを記録してください。例：うまくいったこと、改善点、次回への活かし方..."
                 rows={4}
                 className="w-full rounded px-2 py-1 text-sm outline-none resize-none"
                 style={{
@@ -1671,7 +1676,7 @@ export default function AlchemistCompass() {
                             />
                             
                             <div>
-                              <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>陦悟虚蜑阪Γ繝｢</label>
+                              <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>行動前のメモ</label>
                               <textarea
                                 value={editingLogData.preActionNote || ''}
                                 onChange={(e) => setEditingLogData({...editingLogData, preActionNote: e.target.value})}
@@ -1836,7 +1841,7 @@ export default function AlchemistCompass() {
                           >
                             <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.warning }}>
                               <StickyNote className="w-3 h-3" />
-                              陦悟虚蜑阪Γ繝｢
+                              行動前のメモ
                             </div>
                             <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
                               {log.preActionNote}
@@ -1952,7 +1957,7 @@ export default function AlchemistCompass() {
                 >
                   <div className="text-xs font-bold mb-2 flex items-center gap-1" style={{ color: currentTheme.status.warning }}>
                     <StickyNote className="w-4 h-4" />
-                    陦悟虚蜑阪Γ繝｢
+                    行動前のメモ
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: currentTheme.text.secondary }}>
                     {selectedLog.preActionNote}
@@ -2236,7 +2241,7 @@ export default function AlchemistCompass() {
                     </div>
                   )}
                   <p className="text-xs mt-2" style={{ color: currentTheme.text.tertiary }}>
-                    Upload your context files (e.g., 繝代・繧ｽ繝翫Λ繧､繧ｺ逕ｨ.md) for better personalization
+                    Upload your context files (e.g., profile.md) for better personalization
                   </p>
                 </div>
               </div>
@@ -2340,3 +2345,5 @@ export default function AlchemistCompass() {
     </div>
   );
 }
+
+
