@@ -545,8 +545,19 @@ export default function AlchemistCompass() {
 
   const saveEditedSteps = () => {
     if (guide && editedSteps.length > 0) {
-      setGuide({ ...guide, steps: editedSteps });
+      const updatedGuide = { ...guide, steps: editedSteps };
+      setGuide(updatedGuide);
       setEditingGuideSteps(false);
+      // タスクにguideを保存（手順保持機能）
+      if (selectedTask) {
+        setTasks(prev => ({
+          ...prev,
+          [selectedTask.category]: prev[selectedTask.category].map(t => 
+            t.id === selectedTask.id ? { ...t, guide: updatedGuide } : t
+          )
+        }));
+        setSelectedTask({ ...selectedTask, guide: updatedGuide });
+      }
     }
   };
 
@@ -799,7 +810,7 @@ export default function AlchemistCompass() {
       <div className="flex-1 overflow-auto p-6" ref={mainContentRef}>
         {/* HOME PAGE - LIST MODE */}
         {currentPage === 'home' && mode === 'list' && (
-          <>
+          <div className="pb-24">
             {/* Tab Navigation with Bulk Delete */}
             <div className="flex gap-2 mb-6">
               <button
@@ -1188,12 +1199,12 @@ export default function AlchemistCompass() {
                 <p className="text-xs mt-1">Add a task to get started</p>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* HOME PAGE - GUIDE MODE */}
         {currentPage === 'home' && mode === 'guide' && selectedTask && (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-24">
             <button
               onClick={() => setMode('list')}
               className="text-sm flex items-center gap-1 transition-colors"
@@ -1310,7 +1321,12 @@ export default function AlchemistCompass() {
                         <textarea
                           value={editedSteps.join('\n')}
                           onChange={(e) => {
-                            setEditedSteps(e.target.value.split('\n').filter(s => s.trim()));
+                            setEditedSteps(e.target.value.split('\n'));
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              // Enterキーで改行を許可（デフォルト動作）
+                            }
                           }}
                           className="w-full p-3 rounded-lg text-sm outline-none resize-none"
                           rows={8}
@@ -1319,7 +1335,7 @@ export default function AlchemistCompass() {
                             border: `1px solid ${currentTheme.border.default}`,
                             color: currentTheme.text.primary
                           }}
-                          placeholder="手順を1行ずつ入力してください"
+                          placeholder="手順を1行ずつ入力してください。Enterキーで改行できます。"
                         />
                       ) : (
                         <textarea
@@ -1463,18 +1479,20 @@ export default function AlchemistCompass() {
                 </div>
               </div>
 
-              <button
-                onClick={startTimer}
-                className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
-                style={{
-                  background: currentTheme.gradient.primary,
-                  color: '#ffffff',
-                  boxShadow: currentTheme.shadow.accent
-                }}
-              >
-                <Play className="w-5 h-5" />
-                START {selectedDuration}-MIN TIMER
-              </button>
+              <div className="sticky bottom-20 z-10 pb-4">
+                <button
+                  onClick={startTimer}
+                  className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
+                  style={{
+                    background: currentTheme.gradient.primary,
+                    color: '#ffffff',
+                    boxShadow: currentTheme.shadow.accent
+                  }}
+                >
+                  <Play className="w-5 h-5" />
+                  START {selectedDuration}-MIN TIMER
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1844,8 +1862,8 @@ export default function AlchemistCompass() {
                           /* Display Mode */
                           <>
                             <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-lg mb-2" style={{ color: currentTheme.text.primary }}>
+                              <div className="flex-1 min-w-[60%]">
+                                <h3 className="font-bold text-lg mb-2 break-words" style={{ color: currentTheme.text.primary }}>
                                   {log.title}
                                 </h3>
                                 <div className="flex items-center gap-3 text-xs flex-wrap" style={{ color: currentTheme.text.tertiary }}>
