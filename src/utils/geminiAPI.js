@@ -205,12 +205,6 @@ export async function callGeminiAPI(
       throw new Error('First candidate is null or undefined');
     }
     
-    // finishReasonのチェック（一部のモデルで使用される）
-    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-      console.error('Generation stopped:', candidate.finishReason, 'Model:', model);
-      throw new Error(`Generation stopped: ${candidate.finishReason}`);
-    }
-    
     // contentの存在チェック（Gemini2.5Flash、Proで問題が発生する可能性がある）
     if (!candidate.content) {
       console.error('Candidate structure (no content):', JSON.stringify(candidate, null, 2));
@@ -248,6 +242,19 @@ export async function callGeminiAPI(
       console.error('Part structure (no text):', JSON.stringify(part, null, 2));
       console.error('Model used:', model);
       throw new Error('No text in part. Response may be in unexpected format.');
+    }
+    
+    // finishReasonのチェック（partの確認後に実行）
+    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+      // MAX_TOKENSの場合は、レスポンスが途中で切れている可能性がある
+      if (candidate.finishReason === 'MAX_TOKENS') {
+        console.warn('Generation stopped due to MAX_TOKENS. Response may be truncated. Model:', model);
+        // レスポンスが存在する場合は警告のみで続行（途中で切れていてもJSONが取得できれば処理可能）
+        // ただし、ユーザーに警告を表示するため、エラーではなく警告として扱う
+      } else {
+        console.error('Generation stopped:', candidate.finishReason, 'Model:', model);
+        throw new Error(`Generation stopped: ${candidate.finishReason}`);
+      }
     }
     
     return part.text;
@@ -312,7 +319,8 @@ ${personalizationContext}
 `;
 
   try {
-    const text = await callGeminiAPI(prompt, apiKey, model, 0.7, 1000);
+    // maxOutputTokensを2000に増やしてMAX_TOKENSエラーを回避
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.7, 2000);
     
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*?\}/);
@@ -340,6 +348,9 @@ ${personalizationContext}
     console.error('Task evaluation failed:', error);
     // より詳細なエラーメッセージを提供
     const errorMessage = error.message || 'Unknown error';
+    if (errorMessage.includes('MAX_TOKENS') || errorMessage.includes('最大トークン')) {
+      throw new Error(`タスク評価に失敗しました: レスポンスが最大トークン数に達しました。プロンプトを短くするか、モデル設定を確認してください。`);
+    }
     if (errorMessage.includes('candidates') || errorMessage.includes('content') || errorMessage.includes('parts')) {
       throw new Error(`タスク評価に失敗しました: APIレスポンスの形式が予期と異なります。モデル(${model})の設定を確認してください。詳細: ${errorMessage}`);
     }
