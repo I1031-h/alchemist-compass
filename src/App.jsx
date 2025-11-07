@@ -1,4 +1,5 @@
-﻿//main繝悶Λ繝ｳ繝√↓繧ｳ繝溘ャ繝医ｒ螟画峩縺励・繝ｼ繧ｸ縺吶ｋ縺溘ａ縺ｮ繧ｳ繝｡繝ｳ繝・import React, { useState, useEffect, useRef } from 'react';
+﻿//mainブランチにコミットを変更しマージするためのコメント
+import React, { useState, useEffect, useRef } from 'react';
 import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User, BookOpen, StickyNote, List, Edit, X, Eye } from 'lucide-react';
 import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions, bulkEvaluateTasks, generateTaskCompletionSummary } from './utils/geminiAPI';
 import { themes, applyTheme } from './utils/themes';
