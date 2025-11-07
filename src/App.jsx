@@ -1,5 +1,6 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
-import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User, BookOpen, StickyNote, List, Edit, X, Eye } from 'lucide-react';
+﻿//mainブランチにコミットを変更しマージするためのコメント
+import React, { useState, useEffect, useRef } from 'react';
+import { Home, BarChart3, Settings, Clock, Zap, Target, Plus, Trash2, Play, Pause, Check, Archive, AlertCircle, MessageCircle, Send, Sparkles, Loader, Palette, Upload, FileText, User, BookOpen, StickyNote, List, Edit, X, Eye, ArrowLeftRight } from 'lucide-react';
 import { evaluateTask as evaluateTaskAPI, generateGuide as generateGuideAPI, getChatResponse, getModelOptions, bulkEvaluateTasks, generateTaskCompletionSummary } from './utils/geminiAPI';
 import { themes, applyTheme } from './utils/themes';
 
@@ -243,6 +244,20 @@ export default function AlchemistCompass() {
     }
   };
 
+  const moveTaskCategory = (e, task) => {
+    e.stopPropagation();
+    const newCategory = task.category === 'want' ? 'should' : 'want';
+    setTasks(prev => {
+      const updated = { ...prev };
+      // 元のカテゴリから削除
+      updated[task.category] = updated[task.category].filter(t => t.id !== task.id);
+      // 新しいカテゴリに追加
+      const movedTask = { ...task, category: newCategory };
+      updated[newCategory] = [...(updated[newCategory] || []), movedTask].sort((a, b) => b.score - a.score);
+      return updated;
+    });
+  };
+
   const bulkDeleteTasks = () => {
     if (window.confirm(`${activeTab.toUpperCase()}ボードのすべてのタスク (${tasks[activeTab].length}件) を削除しますか?`)) {
       setTasks(prev => ({
@@ -341,40 +356,98 @@ export default function AlchemistCompass() {
     setIsBulkProcessing(true);
     setErrorMessage('');
     
-    try {
-      const personalContext = {
-        customInstructions,
-        uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
-      };
+    const personalContext = {
+      customInstructions,
+      uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
+    };
 
-      let newTasks;
-      if (apiKey) {
-        newTasks = await bulkEvaluateTasks(bulkTaskText, personalContext, apiKey, selectedModel);
-      } else {
-        const lines = bulkTaskText.split('\n').filter(line => line.trim());
-        newTasks = lines.map(line => {
-          const impact = Math.floor(Math.random() * 4) + 7;
-          const ease = Math.floor(Math.random() * 5) + 6;
-          return {
-            title: line.trim(),
-            category: 'want',
-            impact,
-            ease,
-            estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
-            reason: 'API Keyを設定するとAI評価が有効になります',
-            score: impact * ease,
-            preActionNote: '',
-            postActionNote: ''
-          };
+    const lines = bulkTaskText.split('\n').filter(line => line.trim());
+    const tasksWithMeta = [];
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+
+    if (apiKey) {
+      // まず一括評価を試みる
+      try {
+        const bulkTasks = await bulkEvaluateTasks(bulkTaskText, personalContext, apiKey, selectedModel);
+        bulkTasks.forEach((task, index) => {
+          tasksWithMeta.push({
+            ...task,
+            id: Date.now() + index,
+            createdAt: new Date().toISOString()
+          });
+          successCount++;
         });
+      } catch (bulkError) {
+        console.warn('Bulk evaluation failed, trying individual evaluation:', bulkError);
+        // 一括評価が失敗した場合、個別評価を試みる
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          try {
+            const evaluation = await evaluateTaskAPI(line.trim(), 'want', personalContext, apiKey, selectedModel);
+            tasksWithMeta.push({
+              id: Date.now() + i,
+              title: line.trim(),
+              category: 'want',
+              ...evaluation,
+              createdAt: new Date().toISOString(),
+              preActionNote: '',
+              postActionNote: ''
+            });
+            successCount++;
+          } catch (individualError) {
+            console.error(`Failed to evaluate task "${line.trim()}":`, individualError);
+            failCount++;
+            errors.push(`"${line.trim()}"`);
+            // フォールバック: デフォルト値で追加
+            const impact = Math.floor(Math.random() * 4) + 7;
+            const ease = Math.floor(Math.random() * 5) + 6;
+            tasksWithMeta.push({
+              id: Date.now() + i,
+              title: line.trim(),
+              category: 'want',
+              impact,
+              ease,
+              estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
+              reason: 'AI評価に失敗したため、デフォルト値で追加しました',
+              score: impact * ease,
+              preActionNote: '',
+              postActionNote: '',
+              createdAt: new Date().toISOString()
+            });
+            successCount++;
+          }
+          // APIレート制限を避けるため、少し待機
+          if (i < lines.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
       }
+    } else {
+      // APIキーがない場合はデフォルト値で追加
+      lines.forEach((line, index) => {
+        const impact = Math.floor(Math.random() * 4) + 7;
+        const ease = Math.floor(Math.random() * 5) + 6;
+        tasksWithMeta.push({
+          id: Date.now() + index,
+          title: line.trim(),
+          category: 'want',
+          impact,
+          ease,
+          estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
+          reason: 'API Keyを設定するとAI評価が有効になります',
+          score: impact * ease,
+          preActionNote: '',
+          postActionNote: '',
+          createdAt: new Date().toISOString()
+        });
+        successCount++;
+      });
+    }
 
-      const tasksWithMeta = newTasks.map((task, index) => ({
-        ...task,
-        id: Date.now() + index,
-        createdAt: new Date().toISOString()
-      }));
-
+    // 成功したタスクを追加
+    if (tasksWithMeta.length > 0) {
       setTasks(prev => {
         const updated = { ...prev };
         tasksWithMeta.forEach(task => {
@@ -383,113 +456,78 @@ export default function AlchemistCompass() {
         });
         return updated;
       });
-
-      setBulkTaskText('');
-      setShowBulkAdd(false);
-    } catch (error) {
-      console.error('Bulk task processing failed:', error);
-      setErrorMessage(error.message || '一括タスク処理に失敗しました。API Keyやモデル設定を確認してください。');
-      setTimeout(() => setErrorMessage(''), 5000);
-    } finally {
-      setIsBulkProcessing(false);
     }
+
+    // エラーメッセージの表示
+    if (failCount > 0) {
+      const errorMsg = `${successCount}件のタスクを追加しましたが、${failCount}件の評価に失敗しました。${errors.length > 0 ? `失敗したタスク: ${errors.slice(0, 3).join(', ')}${errors.length > 3 ? '...' : ''}` : ''}`;
+      setErrorMessage(errorMsg);
+      setTimeout(() => setErrorMessage(''), 8000);
+    } else if (successCount === 0) {
+      setErrorMessage('タスクの追加に失敗しました。API Keyやモデル設定を確認してください。');
+      setTimeout(() => setErrorMessage(''), 5000);
+    }
+
+    setBulkTaskText('');
+    setShowBulkAdd(false);
+    setIsBulkProcessing(false);
   };
 
   const selectTask = async (task) => {
     setSelectedTask(task);
     setMode('guide');
     setChatMessages([]);
+    setGuide(null);
     setErrorMessage('');
     setPreActionNote(task.preActionNote || '');
     setEditingGuideSteps(false);
-    
-    // タスクに既にguideが保存されている場合はそれを使用（キャッシュ）
-    if (task.guide) {
-      setGuide(task.guide);
-      setEditedSteps(task.guide.steps || []);
-      setIsLoadingGuide(false);
-      return;
-    }
-    
-    // guideが存在しない場合のみ生成
-    // 以前のguideをクリアし、ローディング状態を設定
-    setGuide(null);
     setEditedSteps([]);
-    setIsLoadingGuide(true);
     
     const personalContext = {
       customInstructions,
       uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
     };
     
-    const fallbackGuide = {
-      approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
-      steps: [
-        'タスクの目的を明確にする(1-2分)',
-        '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
-        '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
-      ],
-      completion: '完了したらMVPを確認し、次のステップを考える。'
-    };
-    
     if (apiKey) {
-      // setIsLoadingGuide(true)は既に上で設定済み
+      setIsLoadingGuide(true);
       try {
         const generatedGuide = await generateGuideAPI(task, personalContext, apiKey, selectedModel);
         setGuide(generatedGuide);
         setEditedSteps(generatedGuide.steps || []);
-        // タスクにguideを保存（キャッシュ）
-        setTasks(prev => ({
-          ...prev,
-          [task.category]: prev[task.category].map(t => 
-            t.id === task.id ? { ...t, guide: generatedGuide } : t
-          )
-        }));
       } catch (error) {
         console.error('Guide generation failed:', error);
-        // エラー時もfallbackGuideを設定
-        setGuide(fallbackGuide);
+        const fallbackGuide = {
+          approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
+          steps: [
+            'タスクの目的を明確にする(1-2分)',
+            '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
+            '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
+          ],
+          completion: '完了したらMVPを確認し、次のステップを考える。'
+        };
         setEditedSteps(fallbackGuide.steps);
-        // タスクにfallbackGuideを保存
-        setTasks(prev => ({
-          ...prev,
-          [task.category]: prev[task.category].map(t => 
-            t.id === task.id ? { ...t, guide: fallbackGuide } : t
-          )
-        }));
       } finally {
         setIsLoadingGuide(false);
       }
     } else {
-      // APIキーがない場合は即座にfallbackGuideを設定
+      const fallbackGuide = {
+        approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
+        steps: [
+          'タスクの目的を明確にする(1-2分)',
+          '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
+          '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
+        ],
+        completion: '完了したらMVPを確認し、次のステップを考える。'
+      };
       setGuide(fallbackGuide);
       setEditedSteps(fallbackGuide.steps);
-      setIsLoadingGuide(false);
-      // タスクにfallbackGuideを保存
-      setTasks(prev => ({
-        ...prev,
-        [task.category]: prev[task.category].map(t => 
-          t.id === task.id ? { ...t, guide: fallbackGuide } : t
-        )
-      }));
     }
   };
 
   const saveEditedSteps = () => {
     if (guide && editedSteps.length > 0) {
-      const updatedGuide = { ...guide, steps: editedSteps.filter(s => s.trim().length > 0) };
-      setGuide(updatedGuide);
+      setGuide({ ...guide, steps: editedSteps });
       setEditingGuideSteps(false);
-      // タスクに更新されたguideを保存
-      if (selectedTask) {
-        setTasks(prev => ({
-          ...prev,
-          [selectedTask.category]: prev[selectedTask.category].map(t => 
-            t.id === selectedTask.id ? { ...t, guide: updatedGuide } : t
-          )
-        }));
-        setSelectedTask({ ...selectedTask, guide: updatedGuide });
-      }
     }
   };
 
@@ -717,7 +755,7 @@ export default function AlchemistCompass() {
                   boxShadow: `0 2px 8px ${currentTheme.status.warning}30`
                 }}
               >
-                ● OFFLINE
+                笞 OFFLINE
               </div>
             )}
           </div>
@@ -742,7 +780,7 @@ export default function AlchemistCompass() {
       <div className="flex-1 overflow-auto p-6" ref={mainContentRef}>
         {/* HOME PAGE - LIST MODE */}
         {currentPage === 'home' && mode === 'list' && (
-          <div className="pb-24">
+          <>
             {/* Tab Navigation with Bulk Delete */}
             <div className="flex gap-2 mb-6">
               <button
@@ -1079,6 +1117,19 @@ export default function AlchemistCompass() {
                       START
                     </button>
                     <button
+                      onClick={(e) => moveTaskCategory(e, task)}
+                      className="py-2 px-3 rounded-lg"
+                      style={{
+                        backgroundColor: `${currentTheme.accent.secondary}20`,
+                        border: `1px solid ${currentTheme.accent.secondary}50`,
+                        color: currentTheme.accent.secondary,
+                        boxShadow: `0 2px 6px ${currentTheme.accent.secondary}30`
+                      }}
+                      title={task.category === 'want' ? 'SHOULDに移動' : 'WANTに移動'}
+                    >
+                      <ArrowLeftRight className="w-3 h-3" />
+                    </button>
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         quickCompleteTask(task);
@@ -1118,12 +1169,12 @@ export default function AlchemistCompass() {
                 <p className="text-xs mt-1">Add a task to get started</p>
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* HOME PAGE - GUIDE MODE */}
         {currentPage === 'home' && mode === 'guide' && selectedTask && (
-          <div className="space-y-6 pb-24">
+          <div className="space-y-6">
             <button
               onClick={() => setMode('list')}
               className="text-sm flex items-center gap-1 transition-colors"
@@ -1131,7 +1182,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              ← BACK TO LIST
+              竊・BACK TO LIST
             </button>
 
             <div 
@@ -1174,9 +1225,8 @@ export default function AlchemistCompass() {
               {isLoadingGuide ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader className="w-8 h-8 animate-spin" style={{ color: currentTheme.accent.primary }} />
-                  <span className="ml-3 text-sm" style={{ color: currentTheme.text.secondary }}>手順を生成中...</span>
                 </div>
-              ) : guide ? (
+              ) : guide && (
                 <>
                   <div 
                     className="mb-6 p-4 rounded-lg"
@@ -1205,7 +1255,7 @@ export default function AlchemistCompass() {
                           }}
                         >
                           <Edit className="w-3 h-3 inline mr-1" />
-                          編集                        </button>
+                          邱ｨ髮・                        </button>
                       ) : (
                         <div className="flex gap-2">
                           <button
@@ -1218,7 +1268,7 @@ export default function AlchemistCompass() {
                             }}
                           >
                             <Check className="w-3 h-3" />
-                            保存                          </button>
+                            菫晏ｭ・                          </button>
                           <button
                             onClick={() => {
                               setEditingGuideSteps(false);
@@ -1241,14 +1291,7 @@ export default function AlchemistCompass() {
                         <textarea
                           value={editedSteps.join('\n')}
                           onChange={(e) => {
-                            // 改行を保持（空行も含む）
-                            setEditedSteps(e.target.value.split('\n'));
-                          }}
-                          onKeyDown={(e) => {
-                            // Enterキーで改行できるようにする
-                            if (e.key === 'Enter') {
-                              e.stopPropagation();
-                            }
+                            setEditedSteps(e.target.value.split('\n').filter(s => s.trim()));
                           }}
                           className="w-full p-3 rounded-lg text-sm outline-none resize-none"
                           rows={8}
@@ -1257,7 +1300,7 @@ export default function AlchemistCompass() {
                             border: `1px solid ${currentTheme.border.default}`,
                             color: currentTheme.text.primary
                           }}
-                          placeholder="手順を入力してください（改行可能）"
+                          placeholder="手順を1行ずつ入力してください"
                         />
                       ) : (
                         <textarea
@@ -1374,24 +1417,6 @@ export default function AlchemistCompass() {
                     </div>
                   </div>
                 </>
-              ) : (
-                <div className="flex items-center justify-center py-8">
-                  <div className="text-center">
-                    <AlertCircle className="w-8 h-8 mx-auto mb-2" style={{ color: currentTheme.status.warning }} />
-                    <p className="text-sm" style={{ color: currentTheme.text.secondary }}>手順の読み込みに失敗しました</p>
-                    <button
-                      onClick={() => selectTask(selectedTask)}
-                      className="mt-4 px-4 py-2 rounded-lg text-sm"
-                      style={{
-                        backgroundColor: `${currentTheme.accent.primary}20`,
-                        border: `1px solid ${currentTheme.accent.primary}50`,
-                        color: currentTheme.accent.primary
-                      }}
-                    >
-                      再試行
-                    </button>
-                  </div>
-                </div>
               )}
 
               {/* Timer Duration Selector */}
@@ -1419,21 +1444,18 @@ export default function AlchemistCompass() {
                 </div>
               </div>
 
-              {/* STARTボタン - スクロール時も押しやすいようにsticky配置 */}
-              <div className="sticky bottom-20 z-10 pb-4" style={{ backgroundColor: 'transparent' }}>
-                <button
-                  onClick={startTimer}
-                  className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
-                  style={{
-                    background: currentTheme.gradient.primary,
-                    color: '#ffffff',
-                    boxShadow: currentTheme.shadow.accent
-                  }}
-                >
-                  <Play className="w-5 h-5" />
-                  START {selectedDuration}-MIN TIMER
-                </button>
-              </div>
+              <button
+                onClick={startTimer}
+                className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
+                style={{
+                  background: currentTheme.gradient.primary,
+                  color: '#ffffff',
+                  boxShadow: currentTheme.shadow.accent
+                }}
+              >
+                <Play className="w-5 h-5" />
+                START {selectedDuration}-MIN TIMER
+              </button>
             </div>
           </div>
         )}
@@ -1579,7 +1601,7 @@ export default function AlchemistCompass() {
         {currentPage === 'home' && mode === 'complete' && selectedTask && (
           <div className="space-y-6">
             <div className="text-center space-y-6">
-              <div className="text-6xl mb-4">⏱️</div>
+              <div className="text-6xl mb-4">脂</div>
               <h2 className="text-2xl font-bold" style={{ color: currentTheme.text.primary }}>TASK COMPLETED!</h2>
               <p style={{ color: currentTheme.text.secondary }}>{selectedTask.title}</p>
             </div>
@@ -1809,12 +1831,11 @@ export default function AlchemistCompass() {
                                 </h3>
                                 <div className="flex items-center gap-3 text-xs flex-wrap" style={{ color: currentTheme.text.tertiary }}>
                                   <span>{formatDate(log.completedAt)}</span>
-                                  <span>・</span>
+                                  <span>窶｢</span>
                                   <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {log.actualDuration}分
-                                  </span>
-                                  <span>・</span>
+                                    {log.actualDuration}蛻・                                  </span>
+                                  <span>窶｢</span>
                                   <span className={log.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
                                     {log.category.toUpperCase()}
                                   </span>
@@ -1958,7 +1979,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              ← BACK TO LOGS
+              竊・BACK TO LOGS
             </button>
 
             <div 
@@ -1973,12 +1994,11 @@ export default function AlchemistCompass() {
               
               <div className="flex items-center gap-3 text-xs mb-6" style={{ color: currentTheme.text.tertiary }}>
                 <span>{formatDate(selectedLog.completedAt)}</span>
-                <span>・</span>
+                <span>窶｢</span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {selectedLog.actualDuration}分
-                </span>
-                <span>・</span>
+                  {selectedLog.actualDuration}蛻・                </span>
+                <span>窶｢</span>
                 <span className={selectedLog.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
                   {selectedLog.category.toUpperCase()}
                 </span>
@@ -2150,7 +2170,7 @@ export default function AlchemistCompass() {
                     <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: currentTheme.accent.primary }} className="hover:underline">
                       Get API Key
                     </a>
-                    {' ・ Free tier available'}
+                    {' 窶｢ Free tier available'}
                   </p>
                 </div>
                 
