@@ -742,7 +742,7 @@ export default function AlchemistCompass() {
       <div className="flex-1 overflow-auto p-6" ref={mainContentRef}>
         {/* HOME PAGE - LIST MODE */}
         {currentPage === 'home' && mode === 'list' && (
-          <>
+          <div className="pb-24">
             {/* Tab Navigation with Bulk Delete */}
             <div className="flex gap-2 mb-6">
               <button
@@ -1118,7 +1118,7 @@ export default function AlchemistCompass() {
                 <p className="text-xs mt-1">Add a task to get started</p>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* HOME PAGE - GUIDE MODE */}
