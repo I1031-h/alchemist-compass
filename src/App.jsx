@@ -1092,7 +1092,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              ← BACK TO LIST
+              BACK TO LIST
             </button>
 
             <div 
@@ -1891,7 +1891,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              ← BACK TO LOGS
+              BACK TO LOGS
             </button>
 
             <div 
