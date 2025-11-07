@@ -76,7 +76,7 @@ export default function AlchemistCompass() {
       if (element) {
         const { scrollTop, scrollHeight, clientHeight } = element;
         const isScrolled = scrollTop > 0;
-        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+        // スクロールした瞬間、または最下部に近い場合に表示
         // 繧ｹ繧ｯ繝ｭ繝ｼ繝ｫ縺励◆迸ｬ髢薙√∪縺溘・譛荳矩Κ縺ｫ霑代＞蝣ｴ蜷医↓陦ｨ遉ｺ
         setShowBottomNav(isScrolled || isNearBottom);
       }
@@ -84,7 +84,8 @@ export default function AlchemistCompass() {
 
     const element = mainContentRef.current;
     if (element) {
-      // 蛻晄悄迥ｶ諷九ｒ繝√ぉ繝・け・域怙荳矩Κ縺ｫ霑代＞蝣ｴ蜷医・陦ｨ遉ｺ・・      setTimeout(() => {
+      // 初期状態をチェック（最下部に近い場合は表示）
+      setTimeout(() => {
         handleScroll();
       }, 100);
       element.addEventListener('scroll', handleScroll);
@@ -304,7 +305,7 @@ export default function AlchemistCompass() {
           impact,
           ease,
           estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
-          reason: 'API Key繧定ｨｭ螳壹☆繧九→AI隧穂ｾ｡縺梧怏蜉ｹ縺ｫ縺ｪ繧翫∪縺・,
+          reason: 'API Keyを設定するとAI評価が有効になります',
           score: impact * ease
         };
       }
@@ -328,7 +329,7 @@ export default function AlchemistCompass() {
       setShowAddTask(false);
     } catch (error) {
       console.error('Task evaluation failed:', error);
-      setErrorMessage(error.message || '繧ｿ繧ｹ繧ｯ隧穂ｾ｡縺ｫ螟ｱ謨励＠縺ｾ縺励◆縲・PI Key繧・Δ繝・Ν險ｭ螳壹ｒ遒ｺ隱阪＠縺ｦ縺上□縺輔＞縲・);
+      setErrorMessage(error.message || 'タスク評価に失敗しました。API Keyやモデル設定を確認してください。');
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setIsEvaluating(false);
@@ -361,7 +362,7 @@ export default function AlchemistCompass() {
             impact,
             ease,
             estimatedMinutes: [15, 30, 45, 60][Math.floor(Math.random() * 4)],
-            reason: 'API Key繧定ｨｭ螳壹☆繧九→AI隧穂ｾ｡縺梧怏蜉ｹ縺ｫ縺ｪ繧翫∪縺・,
+            reason: 'API Keyを設定するとAI評価が有効になります',
             score: impact * ease,
             preActionNote: '',
             postActionNote: ''
@@ -388,7 +389,7 @@ export default function AlchemistCompass() {
       setShowBulkAdd(false);
     } catch (error) {
       console.error('Bulk task processing failed:', error);
-      setErrorMessage(error.message || '荳諡ｬ霑ｽ蜉縺ｫ螟ｱ謨励＠縺ｾ縺励◆縲・PI Key繧・Δ繝・Ν險ｭ螳壹ｒ遒ｺ隱阪＠縺ｦ縺上□縺輔＞縲・);
+      setErrorMessage(error.message || '一括タスク処理に失敗しました。API Keyやモデル設定を確認してください。');
       setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setIsBulkProcessing(false);
@@ -419,28 +420,27 @@ export default function AlchemistCompass() {
       } catch (error) {
         console.error('Guide generation failed:', error);
         const fallbackGuide = {
-          approach: 'MVP諤晁・〒邏譌ｩ縺丞ｽ｢縺ｫ縺吶ｋ縺薙→繧帝㍾隕悶・ecision Flow縺ｮ繧医≧縺ｪ2譎る俣螳梧・繧堤岼謖・＠縺ｾ縺励ｇ縺・・,
+          approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
           steps: [
-            '譛蟆城剞縺ｮ讖溯・(1-2讖溯・)繧堤ｴ吶↓譖ｸ縺榊・縺励∝━蜈亥ｺｦ繧呈ｱｺ繧√ｋ(2蛻・',
-            '繝励Ο繝医ち繧､繝励ｒ菴懈・縲ょｮ檎挑縺ｧ縺ｪ縺上※OK縲√∪縺壼虚縺上ｂ縺ｮ繧・60蛻・',
-            '繝・せ繝医＠縺ｦ謾ｹ蝟・せ繧偵Μ繧ｹ繝医い繝・・縲ゅヵ繧｣繝ｼ繝峨ヰ繝・け繝ｫ繝ｼ繝励ｒ髢句ｧ・30蛻・'
+            'タスクの目的を明確にする(1-2分)',
+            '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
+            '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
           ],
-          completion: '蜍穂ｽ懊☆繧貴VP縺悟ｮ梧・縺励∵ｬ｡縺ｮ謾ｹ蝟・せ縺梧・遒ｺ縺ｫ縺ｪ縺｣縺ｦ縺・ｋ縺薙→'
+          completion: '完了したらMVPを確認し、次のステップを考える。'
         };
-        setGuide(fallbackGuide);
         setEditedSteps(fallbackGuide.steps);
       } finally {
         setIsLoadingGuide(false);
       }
     } else {
       const fallbackGuide = {
-        approach: 'MVP諤晁・〒邏譌ｩ縺丞ｽ｢縺ｫ縺吶ｋ縺薙→繧帝㍾隕悶・ecision Flow縺ｮ繧医≧縺ｪ2譎る俣螳梧・繧堤岼謖・＠縺ｾ縺励ｇ縺・・,
+        approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
         steps: [
-          '譛蟆城剞縺ｮ讖溯・(1-2讖溯・)繧堤ｴ吶↓譖ｸ縺榊・縺励∝━蜈亥ｺｦ繧呈ｱｺ繧√ｋ(2蛻・',
-          '繝励Ο繝医ち繧､繝励ｒ菴懈・縲ょｮ檎挑縺ｧ縺ｪ縺上※OK縲√∪縺壼虚縺上ｂ縺ｮ繧・60蛻・',
-          '繝・せ繝医＠縺ｦ謾ｹ蝟・せ繧偵Μ繧ｹ繝医い繝・・縲ゅヵ繧｣繝ｼ繝峨ヰ繝・け繝ｫ繝ｼ繝励ｒ髢句ｧ・30蛻・'
+          'タスクの目的を明確にする(1-2分)',
+          '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
+          '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
         ],
-        completion: '蜍穂ｽ懊☆繧貴VP縺悟ｮ梧・縺励∵ｬ｡縺ｮ謾ｹ蝟・せ縺梧・遒ｺ縺ｫ縺ｪ縺｣縺ｦ縺・ｋ縺薙→'
+        completion: '完了したらMVPを確認し、次のステップを考える。'
       };
       setGuide(fallbackGuide);
       setEditedSteps(fallbackGuide.steps);
@@ -455,7 +455,8 @@ export default function AlchemistCompass() {
   };
 
   const quickCompleteTask = async (task) => {
-    // 繧ｿ繧ｹ繧ｯ繧貞叉蠎ｧ縺ｫ螳御ｺ・＠縺ｦLOGS繧ｿ繝悶↓遘ｻ蜍・    const actualDuration = task.estimatedMinutes || 30;
+    // 即座に完了してLOGSタブに移動
+    const actualDuration = task.estimatedMinutes || 30;
     const personalContext = {
       customInstructions,
       uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
@@ -467,10 +468,10 @@ export default function AlchemistCompass() {
         completionSummary = await generateTaskCompletionSummary(task, personalContext, apiKey, selectedModel);
       } catch (error) {
         console.error('Failed to generate completion summary:', error);
-        completionSummary = `繧ｿ繧ｹ繧ｯ縲・{task.title}縲阪ｒ螳御ｺ・＠縺ｾ縺励◆縲Ａ;
+        completionSummary = `完了: ${task.title}を実行しました。`;
       }
     } else {
-      completionSummary = `繧ｿ繧ｹ繧ｯ縲・{task.title}縲阪ｒ螳御ｺ・＠縺ｾ縺励◆縲Ａ;
+      completionSummary = `完了: ${task.title}を実行しました。`;
     }
     
     const logEntry = {
@@ -488,7 +489,8 @@ export default function AlchemistCompass() {
       [task.category]: prev[task.category].filter(t => t.id !== task.id)
     }));
     
-    // LOGS繧ｿ繝悶↓遘ｻ蜍・    setCurrentPage('logs');
+    // LOGSタブに移動
+    setCurrentPage('logs');
     setLogActiveTab(task.category);
   };
 
@@ -528,10 +530,10 @@ export default function AlchemistCompass() {
             uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
           };
           completionSummary = await generateTaskCompletionSummary(selectedTask, personalContext, apiKey, selectedModel);
-        } catch (error) {
-          console.error('Failed to generate completion summary:', error);
-          completionSummary = postActionNote || `繧ｿ繧ｹ繧ｯ縲・{selectedTask.title}縲阪ｒ螳御ｺ・＠縺ｾ縺励◆縲Ａ;
-        } finally {
+          } catch (error) {
+            console.error('Failed to generate completion summary:', error);
+            completionSummary = postActionNote || `完了: ${selectedTask.title}を実行しました。`;
+          } finally {
           setIsGeneratingSummary(false);
         }
       }
@@ -600,7 +602,7 @@ export default function AlchemistCompass() {
         console.error('Chat response failed:', error);
         setChatMessages(prev => [...prev, { 
           role: 'assistant', 
-          content: '閠・∴縺吶℃縺壹√∪縺壽焔繧貞虚縺九＠縺ｾ縺励ｇ縺・ょｰ上＆縺ｪ荳豁ｩ縺九ｉ蟋九ａ縺ｦ縺上□縺輔＞縲・ 
+          content: 'API Keyを設定すると、より詳細なガイダンスとサポートが受けられます。今すぐ始めましょう！'
         }]);
       } finally {
         setIsSendingMessage(false);
@@ -608,7 +610,7 @@ export default function AlchemistCompass() {
     } else {
       setChatMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: '閠・∴縺吶℃縺壹√∪縺壽焔繧貞虚縺九＠縺ｾ縺励ｇ縺・ょｰ上＆縺ｪ荳豁ｩ縺九ｉ蟋九ａ縺ｦ縺上□縺輔＞縲・ 
+        content: 'API Keyを設定すると、より詳細なガイダンスとサポートが受けられます。今すぐ始めましょう！'
       }]);
     }
   };
@@ -653,7 +655,7 @@ export default function AlchemistCompass() {
                   boxShadow: `0 2px 8px ${currentTheme.status.success}30`
                 }}
               >
-                笳・ONLINE
+                ● ONLINE
               </div>
             ) : (
               <div 
@@ -1038,7 +1040,7 @@ export default function AlchemistCompass() {
                         color: currentTheme.status.success,
                         boxShadow: `0 2px 6px ${currentTheme.status.success}30`
                       }}
-                      title="蜊ｳ蠎ｧ縺ｫ螳御ｺ・＠縺ｦLOGS繧ｿ繝悶↓遘ｻ蜍・
+                      title="タスクを完了してLOGSタブに移動"
                     >
                       <Check className="w-3 h-3" />
                     </button>
@@ -1061,7 +1063,7 @@ export default function AlchemistCompass() {
 
             {currentTasks.length === 0 && (
               <div className="text-center py-12" style={{ color: currentTheme.text.tertiary }}>
-                <div className="text-4xl mb-2">笳・/div>
+                <div className="text-4xl mb-2">📋</div>
                 <p className="text-sm">NO TASKS FOUND</p>
                 <p className="text-xs mt-1">Add a task to get started</p>
               </div>
@@ -1597,7 +1599,7 @@ export default function AlchemistCompass() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">ACTION LOG</h2>
               <div className="text-sm" style={{ color: currentTheme.text.tertiary }}>
-                {actionLogs.length} 螳御ｺ・ｸ医∩繧ｿ繧ｹ繧ｯ
+                {actionLogs.length} 件のログ
               </div>
             </div>
 
@@ -1636,8 +1638,8 @@ export default function AlchemistCompass() {
               return filteredLogs.length === 0 ? (
                 <div className="text-center py-12" style={{ color: currentTheme.text.tertiary }}>
                   <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-sm">縺ｾ縺險倬鹸縺後≠繧翫∪縺帙ｓ</p>
-                  <p className="text-xs mt-1">繧ｿ繧ｹ繧ｯ繧貞ｮ御ｺ・☆繧九→縲√％縺薙↓險倬鹸縺輔ｌ縺ｾ縺・/p>
+                  <p className="text-sm">ログがありません</p>
+                  <p className="text-xs mt-1">タスクを完了するとログが追加されます</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1684,7 +1686,7 @@ export default function AlchemistCompass() {
                             </div>
 
                             <div>
-                              <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>螳御ｺ・・螳ｹ・井ｽ輔ｒ繧・▲縺溘°・・/label>
+                              <label className="text-xs block mb-1" style={{ color: currentTheme.text.secondary }}>完了後のメモ</label>
                               <textarea
                                 value={editingLogData.postActionNote || ''}
                                 onChange={(e) => setEditingLogData({...editingLogData, postActionNote: e.target.value})}
@@ -1852,7 +1854,7 @@ export default function AlchemistCompass() {
                           >
                             <div className="text-xs font-bold mb-1 flex items-center gap-1" style={{ color: currentTheme.status.success }}>
                               <StickyNote className="w-3 h-3" />
-                              螳御ｺ・・螳ｹ・井ｽ輔ｒ繧・▲縺溘°・・                            </div>
+                              完了後のメモ                            </div>
                             <p className="text-sm" style={{ color: currentTheme.text.secondary }}>
                               {log.postActionNote}
                             </p>
@@ -1968,7 +1970,7 @@ export default function AlchemistCompass() {
                 >
                   <div className="text-xs font-bold mb-2 flex items-center gap-1" style={{ color: currentTheme.status.success }}>
                     <StickyNote className="w-4 h-4" />
-                    螳御ｺ・・螳ｹ・井ｽ輔ｒ繧・▲縺溘°・・                  </div>
+                    完了後のメモ                  </div>
                   <p className="text-sm leading-relaxed" style={{ color: currentTheme.text.secondary }}>
                     {selectedLog.postActionNote}
                   </p>
