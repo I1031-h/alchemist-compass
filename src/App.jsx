@@ -399,15 +399,35 @@ export default function AlchemistCompass() {
     setSelectedTask(task);
     setMode('guide');
     setChatMessages([]);
-    setGuide(null);
     setErrorMessage('');
     setPreActionNote(task.preActionNote || '');
     setEditingGuideSteps(false);
+    
+    // タスクに既にguideが保存されている場合はそれを使用（キャッシュ）
+    if (task.guide) {
+      setGuide(task.guide);
+      setEditedSteps(task.guide.steps || []);
+      setIsLoadingGuide(false);
+      return;
+    }
+    
+    // guideが存在しない場合のみ生成
+    // setGuide(null)は呼ばない（ローディング中にエラー表示を避けるため）
     setEditedSteps([]);
     
     const personalContext = {
       customInstructions,
       uploadedFiles: uploadedFiles.map(f => ({ name: f.name, content: f.content }))
+    };
+    
+    const fallbackGuide = {
+      approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
+      steps: [
+        'タスクの目的を明確にする(1-2分)',
+        '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
+        '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
+      ],
+      completion: '完了したらMVPを確認し、次のステップを考える。'
     };
     
     if (apiKey) {
@@ -416,40 +436,58 @@ export default function AlchemistCompass() {
         const generatedGuide = await generateGuideAPI(task, personalContext, apiKey, selectedModel);
         setGuide(generatedGuide);
         setEditedSteps(generatedGuide.steps || []);
+        // タスクにguideを保存（キャッシュ）
+        setTasks(prev => ({
+          ...prev,
+          [task.category]: prev[task.category].map(t => 
+            t.id === task.id ? { ...t, guide: generatedGuide } : t
+          )
+        }));
       } catch (error) {
         console.error('Guide generation failed:', error);
-        const fallbackGuide = {
-          approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
-          steps: [
-            'タスクの目的を明確にする(1-2分)',
-            '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
-            '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
-          ],
-          completion: '完了したらMVPを確認し、次のステップを考える。'
-        };
+        // エラー時もfallbackGuideを設定
+        setGuide(fallbackGuide);
         setEditedSteps(fallbackGuide.steps);
+        // タスクにfallbackGuideを保存
+        setTasks(prev => ({
+          ...prev,
+          [task.category]: prev[task.category].map(t => 
+            t.id === task.id ? { ...t, guide: fallbackGuide } : t
+          )
+        }));
       } finally {
         setIsLoadingGuide(false);
       }
     } else {
-      const fallbackGuide = {
-        approach: 'MVPアプローチで素早く実装する。Decision Flowの成功パターンである2時間MVPを参考にする。',
-        steps: [
-          'タスクの目的を明確にする(1-2分)',
-          '必要な情報やリソースを確認する。問題があればOK。60分以内に完了できる範囲で進める',
-          '小さなステップに分解して実行する。完璧を目指さず、まず動くものを作る。30分以内に完了できる範囲で進める'
-        ],
-        completion: '完了したらMVPを確認し、次のステップを考える。'
-      };
+      // APIキーがない場合は即座にfallbackGuideを設定
       setGuide(fallbackGuide);
       setEditedSteps(fallbackGuide.steps);
+      setIsLoadingGuide(false);
+      // タスクにfallbackGuideを保存
+      setTasks(prev => ({
+        ...prev,
+        [task.category]: prev[task.category].map(t => 
+          t.id === task.id ? { ...t, guide: fallbackGuide } : t
+        )
+      }));
     }
   };
 
   const saveEditedSteps = () => {
     if (guide && editedSteps.length > 0) {
-      setGuide({ ...guide, steps: editedSteps });
+      const updatedGuide = { ...guide, steps: editedSteps.filter(s => s.trim().length > 0) };
+      setGuide(updatedGuide);
       setEditingGuideSteps(false);
+      // タスクに更新されたguideを保存
+      if (selectedTask) {
+        setTasks(prev => ({
+          ...prev,
+          [selectedTask.category]: prev[selectedTask.category].map(t => 
+            t.id === selectedTask.id ? { ...t, guide: updatedGuide } : t
+          )
+        }));
+        setSelectedTask({ ...selectedTask, guide: updatedGuide });
+      }
     }
   };
 
@@ -1083,7 +1121,7 @@ export default function AlchemistCompass() {
 
         {/* HOME PAGE - GUIDE MODE */}
         {currentPage === 'home' && mode === 'guide' && selectedTask && (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-24">
             <button
               onClick={() => setMode('list')}
               className="text-sm flex items-center gap-1 transition-colors"
@@ -1134,8 +1172,9 @@ export default function AlchemistCompass() {
               {isLoadingGuide ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader className="w-8 h-8 animate-spin" style={{ color: currentTheme.accent.primary }} />
+                  <span className="ml-3 text-sm" style={{ color: currentTheme.text.secondary }}>手順を生成中...</span>
                 </div>
-              ) : guide && (
+              ) : guide ? (
                 <>
                   <div 
                     className="mb-6 p-4 rounded-lg"
@@ -1200,7 +1239,14 @@ export default function AlchemistCompass() {
                         <textarea
                           value={editedSteps.join('\n')}
                           onChange={(e) => {
-                            setEditedSteps(e.target.value.split('\n').filter(s => s.trim()));
+                            // 改行を保持（空行も含む）
+                            setEditedSteps(e.target.value.split('\n'));
+                          }}
+                          onKeyDown={(e) => {
+                            // Enterキーで改行できるようにする
+                            if (e.key === 'Enter') {
+                              e.stopPropagation();
+                            }
                           }}
                           className="w-full p-3 rounded-lg text-sm outline-none resize-none"
                           rows={8}
@@ -1209,7 +1255,7 @@ export default function AlchemistCompass() {
                             border: `1px solid ${currentTheme.border.default}`,
                             color: currentTheme.text.primary
                           }}
-                          placeholder="手順を1行ずつ入力してください"
+                          placeholder="手順を入力してください（改行可能）"
                         />
                       ) : (
                         <textarea
@@ -1326,6 +1372,24 @@ export default function AlchemistCompass() {
                     </div>
                   </div>
                 </>
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <AlertCircle className="w-8 h-8 mx-auto mb-2" style={{ color: currentTheme.status.warning }} />
+                    <p className="text-sm" style={{ color: currentTheme.text.secondary }}>手順の読み込みに失敗しました</p>
+                    <button
+                      onClick={() => selectTask(selectedTask)}
+                      className="mt-4 px-4 py-2 rounded-lg text-sm"
+                      style={{
+                        backgroundColor: `${currentTheme.accent.primary}20`,
+                        border: `1px solid ${currentTheme.accent.primary}50`,
+                        color: currentTheme.accent.primary
+                      }}
+                    >
+                      再試行
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Timer Duration Selector */}
@@ -1353,18 +1417,21 @@ export default function AlchemistCompass() {
                 </div>
               </div>
 
-              <button
-                onClick={startTimer}
-                className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
-                style={{
-                  background: currentTheme.gradient.primary,
-                  color: '#ffffff',
-                  boxShadow: currentTheme.shadow.accent
-                }}
-              >
-                <Play className="w-5 h-5" />
-                START {selectedDuration}-MIN TIMER
-              </button>
+              {/* STARTボタン - スクロール時も押しやすいようにsticky配置 */}
+              <div className="sticky bottom-20 z-10 pb-4" style={{ backgroundColor: 'transparent' }}>
+                <button
+                  onClick={startTimer}
+                  className="w-full py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
+                  style={{
+                    background: currentTheme.gradient.primary,
+                    color: '#ffffff',
+                    boxShadow: currentTheme.shadow.accent
+                  }}
+                >
+                  <Play className="w-5 h-5" />
+                  START {selectedDuration}-MIN TIMER
+                </button>
+              </div>
             </div>
           </div>
         )}
