@@ -1727,7 +1727,7 @@ export default function AlchemistCompass() {
 
         {/* ACTION LOG PAGE with Edit/Delete/Detail */}
         {currentPage === 'logs' && mode !== 'log-detail' && (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-24">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">ACTION LOG</h2>
               <div className="text-sm" style={{ color: currentTheme.text.tertiary }}>
@@ -2005,7 +2005,7 @@ export default function AlchemistCompass() {
 
         {/* LOG DETAIL PAGE */}
         {currentPage === 'logs' && mode === 'log-detail' && selectedLog && (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-24">
             <button
               onClick={() => {
                 setMode('list');
