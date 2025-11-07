@@ -176,28 +176,55 @@ export async function callGeminiAPI(
 
     const data = await response.json();
     
+    // Log full response for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Gemini API Response:', JSON.stringify(data, null, 2));
+    }
+    
     // Enhanced error handling for response structure
     if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
-      throw new Error('No candidates in API response');
+      console.error('API Response structure:', data);
+      throw new Error('No candidates in API response. API may have blocked the content or returned an error.');
     }
     
     const candidate = data.candidates[0];
+    
+    // Check finishReason first - this is critical for understanding why content might be missing
+    if (candidate.finishReason) {
+      const finishReason = candidate.finishReason;
+      if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
+        throw new Error(`Content was blocked by safety filters (finishReason: ${finishReason}). Please try rephrasing your request.`);
+      }
+      if (finishReason === 'MAX_TOKENS') {
+        throw new Error('Response was truncated due to token limit. Please try a shorter prompt.');
+      }
+      if (finishReason === 'OTHER') {
+        throw new Error(`API returned an unexpected finish reason: ${finishReason}`);
+      }
+    }
+    
     if (!candidate || !candidate.content) {
-      throw new Error('No content in candidate');
+      console.error('Candidate structure:', candidate);
+      throw new Error('No content in candidate. Check finishReason for details.');
     }
     
     if (!candidate.content.parts || !Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
-      throw new Error('No parts in content');
+      console.error('Content structure:', candidate.content);
+      console.error('Finish reason:', candidate.finishReason);
+      throw new Error(`No parts in content. Finish reason: ${candidate.finishReason || 'UNKNOWN'}. This may indicate the content was filtered or the response structure is unexpected.`);
     }
     
     const part = candidate.content.parts[0];
     if (!part || !part.text) {
-      throw new Error('No text in part');
+      console.error('Part structure:', part);
+      throw new Error('No text in part. The response may be empty or in an unexpected format.');
     }
     
     return part.text;
   } catch (error) {
     console.error('Gemini API call failed:', error);
+    console.error('Model:', model);
+    console.error('Prompt length:', prompt.length);
     throw error;
   }
 }
