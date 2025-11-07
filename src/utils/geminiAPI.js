@@ -81,32 +81,27 @@ export function getModelOptions() {
 
 /**
  * Build personalization context from userContext
+ * アップロードファイルとカスタムプロンプトのみを使用（誰でも柔軟に使用できるように）
  * @param {object} userContext - User context object
  * @returns {string} - Formatted personalization string
  */
 function buildPersonalizationContext(userContext = {}) {
   const parts = [];
   
-  if (userContext.userName) {
-    parts.push(`- 名前: ${userContext.userName}`);
-  }
-  
-  if (userContext.userContext) {
-    parts.push(`- プロファイル: ${userContext.userContext}`);
-  }
-  
+  // カスタム指示のみを使用
   if (userContext.customInstructions) {
-    parts.push(`- カスタム指示: ${userContext.customInstructions}`);
+    parts.push(`【カスタム指示】\n${userContext.customInstructions}`);
   }
   
+  // アップロードファイルの内容を使用
   if (userContext.uploadedFiles && userContext.uploadedFiles.length > 0) {
-    parts.push(`- アップロードファイル (${userContext.uploadedFiles.length}件):`);
+    parts.push(`【アップロードファイル (${userContext.uploadedFiles.length}件)】`);
     userContext.uploadedFiles.forEach(file => {
-      parts.push(`  - ${file.name}: ${file.content?.substring(0, 500)}...`);
+      parts.push(`\n--- ${file.name} ---\n${file.content || ''}`);
     });
   }
   
-  return parts.length > 0 ? parts.join('\n') : '- ユーザープロファイル情報は設定されていません';
+  return parts.length > 0 ? parts.join('\n') : '';
 }
 
 /**
@@ -177,21 +172,63 @@ export async function callGeminiAPI(
     const data = await response.json();
     
     // Enhanced error handling for response structure
-    if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
-      throw new Error('No candidates in API response');
+    // デバッグ情報を追加してエラー原因を特定しやすくする
+    if (!data) {
+      throw new Error('Empty response from API');
+    }
+    
+    // エラーレスポンスのチェック
+    if (data.error) {
+      throw new Error(`API Error: ${data.error.message || JSON.stringify(data.error)}`);
+    }
+    
+    // candidates配列のチェック
+    if (!data.candidates) {
+      console.error('API Response structure:', JSON.stringify(data, null, 2));
+      throw new Error('No candidates field in API response. Response structure may have changed.');
+    }
+    
+    if (!Array.isArray(data.candidates) || data.candidates.length === 0) {
+      console.error('API Response candidates:', data.candidates);
+      throw new Error('Candidates array is empty or invalid');
     }
     
     const candidate = data.candidates[0];
-    if (!candidate || !candidate.content) {
+    if (!candidate) {
+      throw new Error('First candidate is null or undefined');
+    }
+    
+    // finishReasonのチェック（一部のモデルで使用される）
+    if (candidate.finishReason && candidate.finishReason !== 'STOP') {
+      throw new Error(`Generation stopped: ${candidate.finishReason}`);
+    }
+    
+    if (!candidate.content) {
+      console.error('Candidate structure:', JSON.stringify(candidate, null, 2));
       throw new Error('No content in candidate');
     }
     
-    if (!candidate.content.parts || !Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
+    if (!candidate.content.parts) {
+      console.error('Content structure:', JSON.stringify(candidate.content, null, 2));
       throw new Error('No parts in content');
     }
     
+    if (!Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
+      throw new Error('Parts array is empty or invalid');
+    }
+    
     const part = candidate.content.parts[0];
-    if (!part || !part.text) {
+    if (!part) {
+      throw new Error('First part is null or undefined');
+    }
+    
+    // textフィールドのチェック（一部のモデルでは異なる可能性がある）
+    if (!part.text) {
+      // 他の可能性のあるフィールドをチェック
+      if (part.functionCall) {
+        throw new Error('Function call response not supported');
+      }
+      console.error('Part structure:', JSON.stringify(part, null, 2));
       throw new Error('No text in part');
     }
     
