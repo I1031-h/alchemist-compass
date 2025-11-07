@@ -250,9 +250,13 @@ export async function callGeminiAPI(
       if (candidate.finishReason === 'MAX_TOKENS') {
         console.warn('Generation stopped due to MAX_TOKENS. Response may be truncated. Model:', model);
         // レスポンスが存在する場合は警告のみで続行（途中で切れていてもJSONが取得できれば処理可能）
-        // ただし、ユーザーに警告を表示するため、エラーではなく警告として扱う
+        // MAX_TOKENSでもレスポンスがあれば処理を続行するため、エラーは投げない
+      } else if (candidate.finishReason === 'SAFETY') {
+        console.error('Generation stopped due to SAFETY. Model:', model);
+        throw new Error('Generation stopped: 安全性フィルターにより生成が停止されました');
       } else {
         console.error('Generation stopped:', candidate.finishReason, 'Model:', model);
+        // MAX_TOKENS以外の場合はエラーを投げる
         throw new Error(`Generation stopped: ${candidate.finishReason}`);
       }
     }
@@ -276,40 +280,20 @@ export async function callGeminiAPI(
 export async function evaluateTask(title, category, userContext = {}, apiKey, model = 'gemini-2.5-flash') {
   const personalizationContext = buildPersonalizationContext(userContext);
   
-  const prompt = `あなたはパーソナルAIコーチです。以下のタスクを評価してください。
+  // プロンプトを短縮してMAX_TOKENSエラーを回避
+  const prompt = `タスクを評価してください。
 
-【タスク】
-"${title}"
+タスク: "${title}"
+カテゴリ: ${category === 'want' ? 'やりたいこと' : 'やるべきこと'}
+${personalizationContext ? `\n${personalizationContext}` : ''}
 
-【カテゴリ】
-${category === 'want' ? 'やりたいこと（内発的動機）' : 'やるべきこと（外発的動機）'}
+評価:
+- Impact: 目標達成への貢献度（7-10の整数）
+- Ease: 始めやすさ（6-10の整数）
+- EstimatedMinutes: 所要時間（15/30/45/60のいずれか）
+- Reason: 推奨理由（40-60文字）
 
-【ユーザープロファイル】
-${personalizationContext}
-
-【評価基準】
-1. **Impact（影響度）**: このタスクが目標達成にどれだけ貢献するか
-   - ユーザーの価値観との合致度
-   - スキル成長への寄与度
-   - 実際の成果物やポートフォリオへの影響
-   - 7-10の整数で評価
-
-2. **Ease（始めやすさ）**: 今すぐ取り掛かれるか
-   - 必要なリソースの準備状況
-   - 認知的負荷の低さ
-   - 最初の一歩の明確さ
-   - 6-10の整数で評価
-
-3. **EstimatedMinutes**: 実際の所要時間（15, 30, 45, 60のいずれか）
-
-4. **Reason**: このタスクを推奨する理由
-   - ユーザーの強みをどう活かせるか
-   - なぜ今やるべきか
-   - 40-60文字で具体的に
-
-【出力形式】
-以下のJSON形式**のみ**で回答してください。説明文は不要です。
-
+JSON形式のみで回答:
 {
   "impact": 7-10の整数,
   "ease": 6-10の整数,
@@ -319,8 +303,8 @@ ${personalizationContext}
 `;
 
   try {
-    // maxOutputTokensを2000に増やしてMAX_TOKENSエラーを回避
-    const text = await callGeminiAPI(prompt, apiKey, model, 0.7, 2000);
+    // maxOutputTokensを増やしてMAX_TOKENSエラーを回避（プロンプトも短縮済み）
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.7, 3000);
     
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*?\}/);
@@ -348,12 +332,21 @@ ${personalizationContext}
     console.error('Task evaluation failed:', error);
     // より詳細なエラーメッセージを提供
     const errorMessage = error.message || 'Unknown error';
-    if (errorMessage.includes('MAX_TOKENS') || errorMessage.includes('最大トークン')) {
+    
+    // MAX_TOKENSエラーのチェック（様々な形式に対応）
+    if (errorMessage.includes('MAX_TOKENS') || 
+        errorMessage.includes('最大トークン') || 
+        errorMessage.includes('Max token') ||
+        errorMessage.includes('Generation stopped') && errorMessage.includes('MAX')) {
+      // MAX_TOKENSでもレスポンスが存在する場合は処理を続行するため、ここではエラーを投げない
+      // ただし、JSONが取得できない場合はエラー
       throw new Error(`タスク評価に失敗しました: レスポンスが最大トークン数に達しました。プロンプトを短くするか、モデル設定を確認してください。`);
     }
+    
     if (errorMessage.includes('candidates') || errorMessage.includes('content') || errorMessage.includes('parts')) {
       throw new Error(`タスク評価に失敗しました: APIレスポンスの形式が予期と異なります。モデル(${model})の設定を確認してください。詳細: ${errorMessage}`);
     }
+    
     throw new Error(`タスク評価に失敗しました: ${errorMessage}`);
   }
 }
