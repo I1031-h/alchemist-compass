@@ -1,1 +1,1 @@
-ファイル全体を読み込む必要があります。PowerShellでファイルを読み込んで、それをGitHub APIの`create_or_update_file`に渡します。Base64エンコードして更新します。ファイルが大きすぎるため、GitHub APIの`push_files`で直接プッシュします。
+ファイル全体を読み込む必要があります。PowerShellでファイルを読み込んで、それをGitHub APIの`push_files`に渡します。Base64エンコードして更新します。ファイルが大きすぎるため、GitHub APIの`push_files`で直接プッシュします。
