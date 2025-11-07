@@ -678,7 +678,7 @@ export default function AlchemistCompass() {
                   boxShadow: `0 2px 8px ${currentTheme.status.warning}30`
                 }}
               >
-                笞 OFFLINE
+                 OFFLINE
               </div>
             )}
           </div>
@@ -1513,7 +1513,7 @@ export default function AlchemistCompass() {
         {currentPage === 'home' && mode === 'complete' && selectedTask && (
           <div className="space-y-6">
             <div className="text-center space-y-6">
-              <div className="text-6xl mb-4">脂</div>
+              <div className="text-6xl mb-4">⏱️</div>
               <h2 className="text-2xl font-bold" style={{ color: currentTheme.text.primary }}>TASK COMPLETED!</h2>
               <p style={{ color: currentTheme.text.secondary }}>{selectedTask.title}</p>
             </div>
@@ -1743,11 +1743,11 @@ export default function AlchemistCompass() {
                                 </h3>
                                 <div className="flex items-center gap-3 text-xs flex-wrap" style={{ color: currentTheme.text.tertiary }}>
                                   <span>{formatDate(log.completedAt)}</span>
-                                  <span>窶｢</span>
+                                  <span>・</span>
                                   <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {log.actualDuration}蛻・                                  </span>
-                                  <span>窶｢</span>
+                                    {log.actualDuration}分                                  </span>
+                                  <span>・</span>
                                   <span className={log.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
                                     {log.category.toUpperCase()}
                                   </span>
@@ -1906,11 +1906,11 @@ export default function AlchemistCompass() {
               
               <div className="flex items-center gap-3 text-xs mb-6" style={{ color: currentTheme.text.tertiary }}>
                 <span>{formatDate(selectedLog.completedAt)}</span>
-                <span>窶｢</span>
+                <span>・</span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {selectedLog.actualDuration}蛻・                </span>
-                <span>窶｢</span>
+                  {selectedLog.actualDuration}分                </span>
+                <span>・</span>
                 <span className={selectedLog.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
                   {selectedLog.category.toUpperCase()}
                 </span>
