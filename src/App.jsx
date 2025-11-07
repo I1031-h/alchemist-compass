@@ -412,8 +412,10 @@ export default function AlchemistCompass() {
     }
     
     // guideが存在しない場合のみ生成
-    // setGuide(null)は呼ばない（ローディング中にエラー表示を避けるため）
+    // 以前のguideをクリアし、ローディング状態を設定
+    setGuide(null);
     setEditedSteps([]);
+    setIsLoadingGuide(true);
     
     const personalContext = {
       customInstructions,
@@ -431,7 +433,7 @@ export default function AlchemistCompass() {
     };
     
     if (apiKey) {
-      setIsLoadingGuide(true);
+      // setIsLoadingGuide(true)は既に上で設定済み
       try {
         const generatedGuide = await generateGuideAPI(task, personalContext, apiKey, selectedModel);
         setGuide(generatedGuide);
