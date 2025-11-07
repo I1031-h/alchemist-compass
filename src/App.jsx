@@ -1092,7 +1092,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              竊・BACK TO LIST
+              ← BACK TO LIST
             </button>
 
             <div 
@@ -1165,7 +1165,7 @@ export default function AlchemistCompass() {
                           }}
                         >
                           <Edit className="w-3 h-3 inline mr-1" />
-                          邱ｨ髮・                        </button>
+                          編集                        </button>
                       ) : (
                         <div className="flex gap-2">
                           <button
@@ -1178,7 +1178,7 @@ export default function AlchemistCompass() {
                             }}
                           >
                             <Check className="w-3 h-3" />
-                            菫晏ｭ・                          </button>
+                            保存                          </button>
                           <button
                             onClick={() => {
                               setEditingGuideSteps(false);
@@ -1214,7 +1214,9 @@ export default function AlchemistCompass() {
                         />
                       ) : (
                         <textarea
-                          value={(guide.steps || []).map((step, i) => `${i + 1}. ${step}`).join('\n')}
+                          value={(guide.steps && guide.steps.length > 0) 
+                            ? guide.steps.map((step, i) => `${i + 1}. ${step}`).join('\n')
+                            : '手順が生成されていません。API Keyを設定するか、編集ボタンから手順を追加してください。'}
                           readOnly
                           className="w-full p-3 rounded-lg text-sm leading-relaxed resize-none"
                           rows={8}
@@ -1889,7 +1891,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              竊・BACK TO LOGS
+              ← BACK TO LOGS
             </button>
 
             <div 
