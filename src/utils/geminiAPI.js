@@ -80,6 +80,36 @@ export function getModelOptions() {
 }
 
 /**
+ * Build personalization context from userContext
+ * @param {object} userContext - User context object
+ * @returns {string} - Formatted personalization string
+ */
+function buildPersonalizationContext(userContext = {}) {
+  const parts = [];
+  
+  if (userContext.userName) {
+    parts.push(`- 名前: ${userContext.userName}`);
+  }
+  
+  if (userContext.userContext) {
+    parts.push(`- プロファイル: ${userContext.userContext}`);
+  }
+  
+  if (userContext.customInstructions) {
+    parts.push(`- カスタム指示: ${userContext.customInstructions}`);
+  }
+  
+  if (userContext.uploadedFiles && userContext.uploadedFiles.length > 0) {
+    parts.push(`- アップロードファイル (${userContext.uploadedFiles.length}件):`);
+    userContext.uploadedFiles.forEach(file => {
+      parts.push(`  - ${file.name}: ${file.content?.substring(0, 500)}...`);
+    });
+  }
+  
+  return parts.length > 0 ? parts.join('\n') : '- ユーザープロファイル情報は設定されていません';
+}
+
+/**
  * Call Gemini API with prompt
  * @param {string} prompt - The prompt to send
  * @param {string} apiKey - Gemini API key
@@ -146,12 +176,26 @@ export async function callGeminiAPI(
 
     const data = await response.json();
     
-    // Check if response has content
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error('No content in API response');
+    // Enhanced error handling for response structure
+    if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
+      throw new Error('No candidates in API response');
     }
     
-    return data.candidates[0].content.parts[0].text;
+    const candidate = data.candidates[0];
+    if (!candidate || !candidate.content) {
+      throw new Error('No content in candidate');
+    }
+    
+    if (!candidate.content.parts || !Array.isArray(candidate.content.parts) || candidate.content.parts.length === 0) {
+      throw new Error('No parts in content');
+    }
+    
+    const part = candidate.content.parts[0];
+    if (!part || !part.text) {
+      throw new Error('No text in part');
+    }
+    
+    return part.text;
   } catch (error) {
     console.error('Gemini API call failed:', error);
     throw error;
@@ -168,6 +212,8 @@ export async function callGeminiAPI(
  * @returns {Promise<object>} - Task evaluation
  */
 export async function evaluateTask(title, category, userContext = {}, apiKey, model = 'gemini-2.5-flash') {
+  const personalizationContext = buildPersonalizationContext(userContext);
+  
   const prompt = `あなたはパーソナルAIコーチです。以下のタスクを評価してください。
 
 【タスク】
@@ -177,17 +223,11 @@ export async function evaluateTask(title, category, userContext = {}, apiKey, mo
 ${category === 'want' ? 'やりたいこと（内発的動機）' : 'やるべきこと（外発的動機）'}
 
 【ユーザープロファイル】
-- 22歳、独立したクリエイター・システムビルダー
-- 完璧主義傾向あり（MVP思考・Small Win戦略を推奨）
-- システム構築・自動化・効率化が得意
-- 効率性と洗練性を重視（「美しい仕組み」を好む）
-- Decision Flowを2時間で完成させた実績（高速プロトタイピング能力）
-- 知的好奇心が強く、深い分析を好む
-- 自律性とコントロール感を重視
+${personalizationContext}
 
 【評価基準】
 1. **Impact（影響度）**: このタスクが目標達成にどれだけ貢献するか
-   - ユーザーの価値観（効率性、自律性、創造性）との合致度
+   - ユーザーの価値観との合致度
    - スキル成長への寄与度
    - 実際の成果物やポートフォリオへの影響
    - 7-10の整数で評価
@@ -263,6 +303,7 @@ export async function bulkEvaluateTasks(tasksText, userContext = {}, apiKey, mod
   }
 
   const tasksFormatted = lines.map((line, i) => `${i + 1}. ${line.trim()}`).join('\n');
+  const personalizationContext = buildPersonalizationContext(userContext);
 
   const prompt = `あなたはパーソナルAIコーチです。以下のタスクリストを一括評価してください。
 
@@ -270,11 +311,7 @@ export async function bulkEvaluateTasks(tasksText, userContext = {}, apiKey, mod
 ${tasksFormatted}
 
 【ユーザープロファイル】
-- 22歳、独立したクリエイター・システムビルダー
-- 完璧主義傾向あり（MVP思考を推奨）
-- システム構築・自動化・効率化が得意
-- 効率性と洗練性を重視
-- 自律性とコントロール感を重視
+${personalizationContext}
 
 【評価タスク】
 各タスクについて：
@@ -348,6 +385,8 @@ ${tasksFormatted}
  * @returns {Promise<object>} - Execution guide
  */
 export async function generateGuide(task, userContext = {}, apiKey, model = 'gemini-2.5-flash') {
+  const personalizationContext = buildPersonalizationContext(userContext);
+  
   const prompt = `あなたはパーソナルAIコーチです。以下のタスクの実行ガイドを生成してください。
 
 【タスク】
@@ -360,15 +399,11 @@ export async function generateGuide(task, userContext = {}, apiKey, model = 'gem
 - カテゴリ: ${task.category === 'want' ? 'やりたいこと' : 'やるべきこと'}
 
 【ユーザープロファイル】
-- 完璧主義傾向あり → MVP思考・Small Win戦略を推奨
-- Decision Flowを2時間で完成させた実績
-- 高速プロトタイピング能力
-- システム思考・効率重視
-- 自律性を重んじる
+${personalizationContext}
 
 【ガイド生成の方針】
 1. **Approach**: なぜこのアプローチがユーザーに合うか
-   - ユーザーの強み（システム思考、高速実装）との接続
+   - ユーザーの強みとの接続
    - 完璧主義を回避するための戦略
    - 60-80文字で具体的に
 
@@ -440,6 +475,8 @@ export async function getChatResponse(message, taskContext, chatHistory = [], ap
 
   const elapsedMinutes = Math.floor((5 * 60 - taskContext.timeLeft) / 60);
   const remainingMinutes = Math.floor(taskContext.timeLeft / 60);
+  
+  const personalizationContext = buildPersonalizationContext(taskContext);
 
   const prompt = `あなたはパーソナルAIコーチです。実行中のタスクについて答えてください。
 
@@ -447,6 +484,9 @@ export async function getChatResponse(message, taskContext, chatHistory = [], ap
 - タスク: "${taskContext.title}"
 - 経過時間: ${elapsedMinutes}分
 - 残り時間: ${remainingMinutes}分
+
+【ユーザープロファイル】
+${personalizationContext}
 
 【過去の会話】
 ${historyText || 'なし'}
@@ -457,7 +497,7 @@ ${historyText || 'なし'}
 【応答の方針】
 - 完璧主義を避け、行動を促すトーンで
 - 具体的で実用的なアドバイス
-- ユーザーの強み（システム思考、高速実装）を活かす
+- ユーザーの強みを活かす
 - 80-120文字で簡潔に
 - 必要に応じて質問で問い返す
 
@@ -470,5 +510,45 @@ ${historyText || 'なし'}
   } catch (error) {
     console.error('Chat response failed:', error);
     throw new Error(`チャット応答に失敗しました: ${error.message}`);
+  }
+}
+
+/**
+ * Generate task completion summary (what was done)
+ * @param {object} task - Completed task object
+ * @param {object} userContext - User profile data
+ * @param {string} apiKey - Gemini API key
+ * @param {string} model - Model ID
+ * @returns {Promise<string>} - Generated summary
+ */
+export async function generateTaskCompletionSummary(task, userContext = {}, apiKey, model = 'gemini-2.5-flash') {
+  const personalizationContext = buildPersonalizationContext(userContext);
+  
+  const prompt = `以下のタスクが完了しました。何を実行したかを簡潔にまとめてください。
+
+【タスク】
+"${task.title}"
+
+【タスク情報】
+- カテゴリ: ${task.category === 'want' ? 'やりたいこと' : 'やるべきこと'}
+- 推定時間: ${task.estimatedMinutes}分
+${task.preActionNote ? `- 行動前メモ: ${task.preActionNote}` : ''}
+
+【ユーザープロファイル】
+${personalizationContext}
+
+【出力形式】
+- 完了した内容を50-100文字で簡潔に記述してください
+- 具体的な成果物や達成したことを含めてください
+- 説明文は不要で、内容のみを出力してください
+`;
+
+  try {
+    const text = await callGeminiAPI(prompt, apiKey, model, 0.7, 500);
+    return text.trim().slice(0, 200);
+  } catch (error) {
+    console.error('Task completion summary generation failed:', error);
+    // Return fallback text if generation fails
+    return `タスク「${task.title}」を完了しました。`;
   }
 }
