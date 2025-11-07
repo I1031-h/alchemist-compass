@@ -477,11 +477,21 @@ export default function AlchemistCompass() {
     setSelectedTask(task);
     setMode('guide');
     setChatMessages([]);
-    setGuide(null);
     setErrorMessage('');
     setPreActionNote(task.preActionNote || '');
     setEditingGuideSteps(false);
     setEditedSteps([]);
+    
+    // キャッシュされたguideがある場合は即座に表示
+    if (task.guide) {
+      setGuide(task.guide);
+      setEditedSteps(task.guide.steps || []);
+      setIsLoadingGuide(false);
+      return;
+    }
+    
+    // guideがない場合はnullに設定（ローディング状態）
+    setGuide(null);
     
     const personalContext = {
       customInstructions,
@@ -494,6 +504,13 @@ export default function AlchemistCompass() {
         const generatedGuide = await generateGuideAPI(task, personalContext, apiKey, selectedModel);
         setGuide(generatedGuide);
         setEditedSteps(generatedGuide.steps || []);
+        // タスクにguideをキャッシュ
+        setTasks(prev => ({
+          ...prev,
+          [task.category]: prev[task.category].map(t => 
+            t.id === task.id ? { ...t, guide: generatedGuide } : t
+          )
+        }));
       } catch (error) {
         console.error('Guide generation failed:', error);
         const fallbackGuide = {
@@ -505,6 +522,7 @@ export default function AlchemistCompass() {
           ],
           completion: '完了したらMVPを確認し、次のステップを考える。'
         };
+        setGuide(fallbackGuide);
         setEditedSteps(fallbackGuide.steps);
       } finally {
         setIsLoadingGuide(false);
@@ -521,6 +539,7 @@ export default function AlchemistCompass() {
       };
       setGuide(fallbackGuide);
       setEditedSteps(fallbackGuide.steps);
+      setIsLoadingGuide(false);
     }
   };
 
@@ -755,7 +774,7 @@ export default function AlchemistCompass() {
                   boxShadow: `0 2px 8px ${currentTheme.status.warning}30`
                 }}
               >
-                笞 OFFLINE
+                ● OFFLINE
               </div>
             )}
           </div>
@@ -1182,7 +1201,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              竊・BACK TO LIST
+              ← BACK TO LIST
             </button>
 
             <div 
@@ -1255,7 +1274,7 @@ export default function AlchemistCompass() {
                           }}
                         >
                           <Edit className="w-3 h-3 inline mr-1" />
-                          邱ｨ髮・                        </button>
+                          編集                        </button>
                       ) : (
                         <div className="flex gap-2">
                           <button
@@ -1268,7 +1287,7 @@ export default function AlchemistCompass() {
                             }}
                           >
                             <Check className="w-3 h-3" />
-                            菫晏ｭ・                          </button>
+                            保存                          </button>
                           <button
                             onClick={() => {
                               setEditingGuideSteps(false);
@@ -1601,7 +1620,7 @@ export default function AlchemistCompass() {
         {currentPage === 'home' && mode === 'complete' && selectedTask && (
           <div className="space-y-6">
             <div className="text-center space-y-6">
-              <div className="text-6xl mb-4">脂</div>
+              <div className="text-6xl mb-4">⏱️</div>
               <h2 className="text-2xl font-bold" style={{ color: currentTheme.text.primary }}>TASK COMPLETED!</h2>
               <p style={{ color: currentTheme.text.secondary }}>{selectedTask.title}</p>
             </div>
@@ -1831,11 +1850,11 @@ export default function AlchemistCompass() {
                                 </h3>
                                 <div className="flex items-center gap-3 text-xs flex-wrap" style={{ color: currentTheme.text.tertiary }}>
                                   <span>{formatDate(log.completedAt)}</span>
-                                  <span>窶｢</span>
+                                  <span>・</span>
                                   <span className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    {log.actualDuration}蛻・                                  </span>
-                                  <span>窶｢</span>
+                                    {log.actualDuration}分                                  </span>
+                                  <span>・</span>
                                   <span className={log.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
                                     {log.category.toUpperCase()}
                                   </span>
@@ -1979,7 +1998,7 @@ export default function AlchemistCompass() {
               onMouseEnter={(e) => e.currentTarget.style.color = currentTheme.accent.primary}
               onMouseLeave={(e) => e.currentTarget.style.color = currentTheme.text.secondary}
             >
-              竊・BACK TO LOGS
+              ← BACK TO LOGS
             </button>
 
             <div 
@@ -1994,11 +2013,11 @@ export default function AlchemistCompass() {
               
               <div className="flex items-center gap-3 text-xs mb-6" style={{ color: currentTheme.text.tertiary }}>
                 <span>{formatDate(selectedLog.completedAt)}</span>
-                <span>窶｢</span>
+                <span>・</span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {selectedLog.actualDuration}蛻・                </span>
-                <span>窶｢</span>
+                  {selectedLog.actualDuration}分                </span>
+                <span>・</span>
                 <span className={selectedLog.category === 'want' ? 'text-cyan-400' : 'text-violet-400'}>
                   {selectedLog.category.toUpperCase()}
                 </span>
@@ -2170,7 +2189,7 @@ export default function AlchemistCompass() {
                     <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: currentTheme.accent.primary }} className="hover:underline">
                       Get API Key
                     </a>
-                    {' 窶｢ Free tier available'}
+                    {' ・ Free tier available'}
                   </p>
                 </div>
                 
